@@ -12,14 +12,13 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
-  CheckCircle2,
   BadgeCheck,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "../../auth/AuthContext";
 
 // --- Config ---
-const API_BASE = "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 const PAGE_SIZE = 10;
 const CAMP_STATUSES = ["planned", "scheduled", "ongoing", "completed", "cancelled"];
 
@@ -52,6 +51,7 @@ export default function ManageCampaigns() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
+  // keep hospitalId for creation convenience (if hospital role)
   const hospitalId = useMemo(() => {
     const localUser =
       user || (localStorage.getItem("auth_user") ? JSON.parse(localStorage.getItem("auth_user")) : null);
@@ -59,16 +59,11 @@ export default function ManageCampaigns() {
   }, [user]);
 
   const load = async (pageNum = page) => {
-    if (!hospitalId) {
-      setErr("Hospital id missing in auth");
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     setErr("");
     try {
       const url = new URL(`${API_BASE}/api/camps`);
-      url.searchParams.set("hospitalId", hospitalId);
+      // IMPORTANT: do NOT set hospitalId here — we want ALL campaigns
       if (q) url.searchParams.set("q", q);
       if (status) url.searchParams.set("status", status);
       if (from) url.searchParams.set("from", from);
@@ -96,7 +91,7 @@ export default function ManageCampaigns() {
   useEffect(() => {
     load(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hospitalId]);
+  }, []);
 
   const onCreate = () => setOpenNew(true);
   const onEdit = (row) => setEditing(row);
@@ -179,8 +174,8 @@ export default function ManageCampaigns() {
                       {r.location?.addressLine1 ? `${r.location.addressLine1}, ` : ""}
                       {r.location?.city || ""}
                     </td>
-                    <td className="py-2">{new Date(r.startAt).toLocaleString()}</td>
-                    <td className="py-2">{new Date(r.endAt).toLocaleString()}</td>
+                    <td className="py-2">{r.startAt ? new Date(r.startAt).toLocaleString() : "-"}</td>
+                    <td className="py-2">{r.endAt ? new Date(r.endAt).toLocaleString() : "-"}</td>
                     <td className="py-2"><StatusChip value={r.status} /></td>
                     <td className="py-2">
                       <div className="flex gap-2">

@@ -15,10 +15,10 @@ const commonItems = [
   { key: "blood", label: "Manage Blood Stock", icon: Droplet },
   { key: "appointments", label: "Manage Appointments", icon: CalendarCheck2 },
   { key: "campaigns", label: "Manage Campaigns", icon: Megaphone },
+  { key: "users", label: "Manage Users", icon: Users },
 ];
 
 const adminOnly = [
-  { key: "users", label: "Manage Users", icon: Users },
   { key: "hospitals", label: "Manage Hospitals", icon: Building2 },
 ];
 

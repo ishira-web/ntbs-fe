@@ -28,10 +28,10 @@ export default function AppManagement() {
   }
 
   const isAdmin = role === "admin";
-
+  const isHospital = role === "hospital"
   const Page = useMemo(() => {
     if (active === "dashboard") return isAdmin ? AdminDashboard : HospitalDashboard;
-    if (active === "users") return isAdmin ? ManageUsers : HospitalDashboard;
+    if (active === "users") return  isHospital ? ManageUsers : HospitalDashboard;
     if (active === "hospitals") return isAdmin ? ManageHospitals : HospitalDashboard;
     if (active === "blood") return ManageBloodStock;
     if (active === "appointments") return ManageAppointments;
