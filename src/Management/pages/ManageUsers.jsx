@@ -15,7 +15,7 @@ import toast from "react-hot-toast";
 import { useAuth } from "../../auth/AuthContext";
 
 // --- Config ---
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
+const API_BASE ="http://localhost:5000";
 const PAGE_SIZE = 10;
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const GENDERS = ["male", "female", "other"];
