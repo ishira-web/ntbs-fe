@@ -12,7 +12,7 @@ import ProtectedRoute from "./auth/ProtectedRoute";
 function App() {
   return (
     <>
-      <Toaster position="top-right" toastOptions={{ duration: 2500 }} />
+      <Toaster position="top-right" toastOptions={{ duration: 2500 }}  />
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
