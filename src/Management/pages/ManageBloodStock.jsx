@@ -373,7 +373,6 @@ function AddStockModal({ onClose, onSaved, hospitalId, authFetch }) {
             <X size={18} />
           </button>
         </div>
-
         <form onSubmit={handleSubmit} className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Blood Group</label>
