@@ -8,6 +8,7 @@ import Login from "./Login/Login";
 import HomeLayout from "./Donor/Layouts/HomeLayout";
 import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
+import ProfilePage from "./Donor/Pages/ProfilePage";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route element={<ProtectedRoute roles={["admin", "hospital"]} />}>
             <Route path="/management" element={<AppManagement />} />
           </Route>
+          <Route path="/profile" element={<ProfilePage/>}/>
         </Routes>
       </AuthProvider>
     </>

@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+// src/Management/pages/ManageBloodStock.jsx
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   Droplet,
   RotateCw,
@@ -14,6 +15,7 @@ import {
   Trash2,
   Pencil,
   ArrowRightLeft,
+  Search,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -31,24 +33,6 @@ import {
 } from "recharts";
 import { useAuth } from "../../auth/AuthContext";
 
-/*
-  ManageBloodStock.jsx — end‑to‑end UI wired to your backend
-  ---------------------------------------------------------
-  Features:
-  - List aggregate stock by blood group (units + avg days to expiry)
-  - Add stock (auto-calculated expiry per component)
-  - View per‑stock details (group+component) with batches
-  - Edit/Delete an individual batch
-  - Transfer units from one hospital to another (using existing endpoints)
-  - Summary dashboard (totals by group/component, expiring soon, expired)
-
-  Requirements in app:
-  - TailwindCSS present
-  - lucide-react installed
-  - recharts installed
-  - useAuth() provides { user, authFetch }
-*/
-
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 const GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const COMPONENTS = ["WholeBlood", "RBC", "Plasma", "Platelets", "Cryo"];
@@ -57,10 +41,8 @@ const DEFAULT_SHELF_LIFE_DAYS = { WholeBlood: 35, RBC: 42, Plasma: 365, Platelet
 function computeExpiry(component, collectedAt) {
   const days = DEFAULT_SHELF_LIFE_DAYS[component] ?? 30;
   const base = collectedAt ? new Date(collectedAt) : new Date();
-  const expiry = new Date(base.getTime() + days * 86400000);
-  return expiry;
+  return new Date(base.getTime() + days * 86400000);
 }
-
 function fmtDateTimeLocal(d) {
   const pad = (n) => String(n).padStart(2, "0");
   const yyyy = d.getFullYear();
@@ -70,10 +52,8 @@ function fmtDateTimeLocal(d) {
   const mi = pad(d.getMinutes());
   return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
 }
-
 function StatusDot({ state }) {
-  const cls =
-    state === null ? "bg-gray-300 animate-pulse" : state ? "bg-emerald-500" : "bg-rose-500";
+  const cls = state === null ? "bg-gray-300 animate-pulse" : state ? "bg-emerald-500" : "bg-rose-500";
   const label = state === null ? "Checking backend" : state ? "Backend online" : "Backend offline";
   return (
     <span className="inline-flex items-center gap-2 text-xs text-gray-600">
@@ -85,19 +65,18 @@ function StatusDot({ state }) {
 
 export default function ManageBloodStock() {
   const { authFetch, user } = useAuth();
-  const [stocks, setStocks] = useState([]); // raw docs from /api/bloodstock
+  const [stocks, setStocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [apiOnline, setApiOnline] = useState(null);
   const [hospitalId, setHospitalId] = useState(null);
   const [openAdd, setOpenAdd] = useState(false);
-  const [detailOf, setDetailOf] = useState(null); // { _id, bloodGroup, component, ... }
+  const [detailOf, setDetailOf] = useState(null);
   const [openSummary, setOpenSummary] = useState(false);
 
   const findHospitalId = () => {
     const localUser =
       user || (localStorage.getItem("auth_user") ? JSON.parse(localStorage.getItem("auth_user")) : null);
-    // Prefer a hospitalId if present; otherwise fall back to _id (for testing)
     return localUser?.hospitalId || localUser?._id || localUser?.id || null;
   };
 
@@ -134,10 +113,9 @@ export default function ManageBloodStock() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Aggregate by blood group
   const rows = useMemo(() => {
     const now = Date.now();
-    const groupMap = new Map(); // g -> { units, daySum, dayCount }
+    const groupMap = new Map();
     for (const s of stocks) {
       if (!Array.isArray(s.batches)) continue;
       for (const b of s.batches) {
@@ -150,7 +128,7 @@ export default function ManageBloodStock() {
         const rec = groupMap.get(g);
         rec.units += units;
         if (remainingDays !== null) {
-          rec.daySum += remainingDays * units; // weighted by units
+          rec.daySum += remainingDays * units;
           rec.dayCount += units;
         }
       }
@@ -162,7 +140,6 @@ export default function ManageBloodStock() {
     }).filter((r) => r.units > 0);
   }, [stocks]);
 
-  // Map of group -> components present for quick detail navigation
   const groupToStocks = useMemo(() => {
     const map = new Map();
     for (const s of stocks) {
@@ -183,10 +160,6 @@ export default function ManageBloodStock() {
           </h1>
           <div className="mt-1 flex items-center gap-2 text-xs text-gray-600">
             <StatusDot state={apiOnline} />
-            <span className="text-gray-400">•</span>
-            <code className="rounded bg-gray-50 px-1.5 py-0.5">
-              {`/api/bloodstock?hospitalId=<${hospitalId || "id"}>`}
-            </code>
           </div>
         </div>
 
@@ -212,7 +185,7 @@ export default function ManageBloodStock() {
         </div>
       </div>
 
-      {/* Card/Table */}
+      {/* Table */}
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
         {loading ? (
           <SkeletonTable />
@@ -243,7 +216,6 @@ export default function ManageBloodStock() {
                         onClick={() => {
                           const list = groupToStocks.get(group) || [];
                           if (!list.length) return toast("No components for this group", { icon: "ℹ️" });
-                          // Open first by default; user can switch inside modal
                           setDetailOf({ list, index: 0 });
                         }}
                       >
@@ -258,7 +230,8 @@ export default function ManageBloodStock() {
         )}
 
         <p className="mt-3 text-xs text-gray-500">
-          Tip: Use “View” to inspect batches per component, edit units, or delete a batch. Use “Summary” for charts and expiring/expired breakdowns.
+          Tip: Use “View” to inspect batches per component, edit units, transfer, or delete a batch.
+          Use “Summary” for charts and expiring/expired breakdowns.
         </p>
       </div>
 
@@ -285,19 +258,12 @@ export default function ManageBloodStock() {
       )}
 
       {openSummary && (
-        <SummaryModal
-          hospitalId={hospitalId}
-          authFetch={authFetch}
-          onClose={() => setOpenSummary(false)}
-        />)
-      }
+        <SummaryModal hospitalId={hospitalId} authFetch={authFetch} onClose={() => setOpenSummary(false)} />
+      )}
     </div>
   );
 }
 
-/* ===========================
-   Skeleton
-   =========================== */
 function SkeletonTable() {
   return (
     <div className="space-y-2">
@@ -529,7 +495,7 @@ function StockDetailModal({ detailOf, setDetailOf, authFetch, onAnyChange }) {
 }
 
 /* ===========================
-   Edit batch inline button
+   Edit batch
    =========================== */
 function EditBatchButton({ stockId, batch, authFetch, onSaved }) {
   const [open, setOpen] = useState(false);
@@ -625,7 +591,7 @@ function EditBatchModal({ stockId, initial, authFetch, onClose, onSaved }) {
 }
 
 /* ===========================
-   Transfer units button
+   Transfer — with Hospital Name search
    =========================== */
 function TransferButton({ stock, batch, authFetch, onTransferred }) {
   const [open, setOpen] = useState(false);
@@ -636,7 +602,7 @@ function TransferButton({ stock, batch, authFetch, onTransferred }) {
       </button>
       {open && (
         <TransferModal
-          source={{ stockId: stock._id, bloodGroup: stock.bloodGroup, component: stock.component, batch }}
+          source={{ stockId: stock._id, sourceHospitalId: stock.hospitalId, bloodGroup: stock.bloodGroup, component: stock.component, batch }}
           authFetch={authFetch}
           onClose={() => setOpen(false)}
           onDone={() => {
@@ -649,20 +615,182 @@ function TransferButton({ stock, batch, authFetch, onTransferred }) {
   );
 }
 
+/** Type-ahead hospital picker */
+function HospitalPicker({ value, onChange, authFetch, excludeId }) {
+  const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [showList, setShowList] = useState(false);
+  const [manual, setManual] = useState(false);
+  const boxRef = useRef(null);
+  const debounceRef = useRef(0);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (boxRef.current && !boxRef.current.contains(e.target)) setShowList(false);
+    };
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, []);
+
+  // Fetch hospitals by name (supports either /api/hospital?search= or /api/hospitals?search=)
+  const search = async (term) => {
+    setLoading(true);
+    try {
+      const tryEndpoints = [
+        `${API_BASE}/api/hospital?search=${encodeURIComponent(term)}&limit=10`,
+        `${API_BASE}/api/hospitals?search=${encodeURIComponent(term)}&limit=10`,
+      ];
+      let data = null;
+      for (const url of tryEndpoints) {
+        const res = await authFetch(url);
+        if (res.ok) {
+          const j = await res.json();
+          data = j;
+          break;
+        }
+      }
+      const arr = (data?.hospitals || data?.data || data || []).filter(Boolean);
+      const mapped = arr
+        .map((h) => ({
+          _id: h._id || h.id,
+          name: h.name || h.hospitalName || h.title || "Unnamed Hospital",
+          city: h.city || "",
+          district: h.district || "",
+        }))
+        .filter((h) => h._id && h._id !== excludeId);
+      setItems(mapped);
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+      setShowList(true);
+    }
+  };
+
+  // Debounced query
+  useEffect(() => {
+    window.clearTimeout(debounceRef.current);
+    if (!q || q.trim().length < 2) {
+      setItems([]);
+      return;
+    }
+    debounceRef.current = window.setTimeout(() => search(q.trim()), 250);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
+
+  // When value is set from outside, we clear current selected label (optional)
+  useEffect(() => {
+    if (!value) setSelected(null);
+  }, [value]);
+
+  return (
+    <div className="relative" ref={boxRef}>
+      {!manual ? (
+        <>
+          <div className="flex items-center border rounded-lg px-2">
+            <Search size={16} className="text-gray-400" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onFocus={() => q.trim().length >= 2 && setShowList(true)}
+              placeholder="Search hospital by name (min 2 chars)"
+              className="w-full px-2 py-2 text-sm outline-none"
+            />
+          </div>
+          <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-500">
+            {selected ? (
+              <>
+                <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5">
+                  Selected: <b className="font-medium">{selected.name}</b>
+                </span>
+                <span className="text-gray-400">•</span>
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => {
+                    setSelected(null);
+                    onChange("");
+                  }}
+                >
+                  Clear
+                </button>
+              </>
+            ) : (
+              <span>No hospital selected</span>
+            )}
+            <span className="text-gray-400">•</span>
+            <button type="button" className="underline" onClick={() => setManual(true)}>
+              Enter ID manually
+            </button>
+          </div>
+
+          {showList && (loading || items.length > 0) && (
+            <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-sm max-h-64 overflow-auto">
+              {loading ? (
+                <div className="p-3 text-sm text-gray-500">Searching…</div>
+              ) : (
+                items.map((h) => (
+                  <button
+                    key={h._id}
+                    type="button"
+                    className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                    onClick={() => {
+                      setSelected(h);
+                      onChange(h._id, h);
+                      setShowList(false);
+                      setQ("");
+                    }}
+                  >
+                    <div className="text-sm font-medium">{h.name}</div>
+                    <div className="text-xs text-gray-500">
+                      {[h.city, h.district].filter(Boolean).join(", ")}
+                    </div>
+                  </button>
+                ))
+              )}
+              {!loading && items.length === 0 && (
+                <div className="p-3 text-sm text-gray-500">No matches</div>
+              )}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="grid grid-cols-1 gap-2">
+          <input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+            placeholder="Destination hospital ObjectId"
+          />
+          <div className="text-[11px] text-gray-500">
+            Don’t know the ID?{" "}
+            <button type="button" className="underline" onClick={() => setManual(false)}>
+              Search by name instead
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TransferModal({ source, authFetch, onClose, onDone }) {
   const [destHospitalId, setDestHospitalId] = useState("");
+  const [destHospital, setDestHospital] = useState(null);
   const [units, setUnits] = useState(1);
   const [busy, setBusy] = useState(false);
 
   const doTransfer = async (e) => {
     e.preventDefault();
-    if (!destHospitalId) return toast.error("Destination hospital id required");
+    if (!destHospitalId) return toast.error("Please choose a destination hospital");
     if (units < 1) return toast.error("Units must be at least 1");
     if (units > source.batch.units) return toast.error("Units exceed available in batch");
 
     setBusy(true);
     try {
-      // 1) Add units to destination hospital (as a new batch with same collected/expiry)
+      // 1) Add to destination hospital (new batch with same dates)
       const payload = {
         hospitalId: destHospitalId,
         bloodGroup: source.bloodGroup,
@@ -682,19 +810,26 @@ function TransferModal({ source, authFetch, onClose, onDone }) {
         throw new Error(d.message || "Failed to add to destination");
       }
 
-      // 2) Decrease units in source batch
+      // 2) Decrease from source batch
       const newUnits = source.batch.units - Number(units);
-      const patchRes = await authFetch(`${API_BASE}/api/bloodstock/${source.stockId}/batches/${source.batch._id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ units: newUnits }),
-      });
+      const patchRes = await authFetch(
+        `${API_BASE}/api/bloodstock/${source.stockId}/batches/${source.batch._id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ units: newUnits }),
+        }
+      );
       if (!patchRes.ok) {
         const d = await patchRes.json().catch(() => ({}));
         throw new Error(d.message || "Failed to decrement source batch");
       }
 
-      toast.success("Transfer completed");
+      toast.success(
+        `Transferred ${units} unit(s) ${source.bloodGroup}/${source.component} to ${
+          destHospital?.name || "destination"
+        }`
+      );
       onDone?.();
     } catch (e) {
       toast.error(e.message || "Transfer failed");
@@ -712,12 +847,28 @@ function TransferModal({ source, authFetch, onClose, onDone }) {
         </div>
         <form onSubmit={doTransfer} className="p-4 grid grid-cols-1 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Destination Hospital ID</label>
-            <input value={destHospitalId} onChange={(e) => setDestHospitalId(e.target.value)} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm" placeholder="ObjectId of destination hospital" required />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Destination Hospital</label>
+            <HospitalPicker
+              value={destHospitalId}
+              onChange={(id, item) => {
+                setDestHospitalId(id);
+                setDestHospital(item || null);
+              }}
+              authFetch={authFetch}
+              excludeId={source.sourceHospitalId}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Units to transfer</label>
-            <input type="number" min={1} max={source.batch.units} value={units} onChange={(e) => setUnits(+e.target.value)} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm" required />
+            <input
+              type="number"
+              min={1}
+              max={source.batch.units}
+              value={units}
+              onChange={(e) => setUnits(+e.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+              required
+            />
             <p className="text-[11px] text-gray-500 mt-1">Available: {source.batch.units}</p>
           </div>
           <div className="flex items-center justify-end gap-2 pt-2">
@@ -733,7 +884,7 @@ function TransferModal({ source, authFetch, onClose, onDone }) {
 }
 
 /* ===========================
-   Summary (charts) — /summary
+   Summary (charts)
    =========================== */
 function SummaryModal({ hospitalId, authFetch, onClose }) {
   const [data, setData] = useState(null);
