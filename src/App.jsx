@@ -2,7 +2,6 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-
 import AppManagement from "./Management/AppManagement";
 import Login from "./Login/Login";
 import HomeLayout from "./Donor/Layouts/HomeLayout";
@@ -10,6 +9,9 @@ import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import ProfilePage from "./Donor/Pages/ProfilePage";
 import CampaignLayout from "./Donor/Layouts/CampaignLayout";
+import LearnLayout from "./Donor/Layouts/LearnLayout";
+import HospitalLayout from "./Donor/Layouts/HospitalLayout";
+
 
 function App() {
   return (
@@ -24,6 +26,9 @@ function App() {
           </Route>
           <Route path="/profile" element={<ProfilePage/>}/>
           <Route path="/campaigns" element={<CampaignLayout/>}/>
+          <Route path="/learn" element={<LearnLayout/>}/>
+          <Route path="/hospitals" element={<HospitalLayout/>}/>
+      
         </Routes>
       </AuthProvider>
     </>

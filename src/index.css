@@ -4,7 +4,6 @@
   font-family: "Outfit";
   src: url(/src/assets/fonts/Outfit-Regular.ttf) format("truetype");
 }
-
 @theme{
     --font-Outfit: "Outfit";
 }

@@ -208,7 +208,8 @@ export default function Navbar() {
             <span className="inline-flex h-8 w-8 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white items-center justify-center transition-transform group-hover:scale-105">
               <Droplet size={18} fill="white" />
             </span>
-            <span className="text-lg font-bold">Lifeline</span>
+            <span className="text-lg font-bold">NTBS</span><br />
+            <span></span>
           </Link>
 
           <div className="hidden md:flex items-center gap-6">
