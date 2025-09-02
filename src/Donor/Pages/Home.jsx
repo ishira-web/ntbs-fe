@@ -20,7 +20,7 @@ const slides = [
     cta: "රුධිර දානයට එක්වන්න",
     href: "/donate",
     image:
-      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=1600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1697192156499-d85cfe1452c0?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
   },
   {
     title: "අදම රුධිර දානයට",
@@ -28,7 +28,7 @@ const slides = [
     cta: "ඉදිරි කඳවුරැ බලන්න",
     href: "/campaigns",
     image:
-      "https://images.unsplash.com/photo-1582719478185-2c1c9b1f382d?q=80&w=1600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1542884841-9f546e727bca?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
   },
   {
     title: "රෝගියෙකුට ඔබයි අපේක්ෂාව",
@@ -36,7 +36,7 @@ const slides = [
     cta: "ආයතනික දායකත්වය",
     href: "/hospitals",
     image:
-      "https://images.unsplash.com/photo-1584467735871-2d2fd4a66caa?q=80&w=1600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1676313125237-cacf3e880dc2?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
   },
 ];
 
