@@ -4,7 +4,7 @@ import Navbar from '../components/navbar'
 
 function HomeLayout() {
   return (
-    <div>
+    <div className='font-Outfit'>
       <Navbar/>
       <Home/>
     </div>

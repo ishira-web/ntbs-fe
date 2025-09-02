@@ -23,7 +23,7 @@ export default function Navbar() {
     const parts = (displayName || "").split(/\s+/);
     return ((parts[0]?.[0] || "D") + (parts[1]?.[0] || "N")).toUpperCase();
   }, [displayName]);
-  const profileHref = user?._id ? `/donor/profile/${user._id}` : "/donor/profile";
+  const profileHref = user?._id ? `/profile/${user._id}` : "/profile";
 
   // UI state
   const [mobileOpen, setMobileOpen] = useState(false);

@@ -16,6 +16,12 @@ import {
   Save,
   CheckCircle,
   AlertCircle,
+  Edit3,
+  Heart,
+  Activity,
+  Scale,
+  Pill,
+  FileText
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import { useParams } from "react-router-dom";
@@ -52,34 +58,31 @@ const StatusChip = ({ value }) => {
 
 const Skeleton = () => (
   <div className="space-y-6">
-    <div className="h-8 w-1/3 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
-    <div className="rounded-3xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-md">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse transition-opacity duration-500" />
-        ))}
+    <div className="flex items-center gap-4">
+      <div className="h-16 w-16 rounded-2xl bg-gray-200 animate-pulse"></div>
+      <div className="space-y-2">
+        <div className="h-6 w-48 bg-gray-200 rounded-lg animate-pulse"></div>
+        <div className="h-4 w-32 bg-gray-200 rounded-lg animate-pulse"></div>
       </div>
     </div>
-    <div className="rounded-3xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-md">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse transition-opacity duration-500" />
-        ))}
-      </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="h-48 bg-gray-100 rounded-2xl animate-pulse"></div>
+      ))}
     </div>
   </div>
 );
 
-function InfoRow({ icon: Icon, label, value, right }) {
+function InfoRow({ icon: Icon, label, value, right, className = "" }) {
   return (
-    <div className="flex items-center justify-between border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 bg-white dark:bg-gray-800 transition-all duration-200">
-      <div className="flex items-center gap-2.5">
-        <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700">
-          <Icon size={16} className="text-gray-700 dark:text-gray-300" />
+    <div className={`flex items-center justify-between p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 ${className}`}>
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+          <Icon size={18} />
         </div>
         <div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
-          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{value ?? "—"}</div>
+          <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">{label}</div>
+          <div className="text-sm font-medium text-gray-900">{value ?? "—"}</div>
         </div>
       </div>
       {right}
@@ -87,12 +90,19 @@ function InfoRow({ icon: Icon, label, value, right }) {
   );
 }
 
-function Avatar({ name, avatar }) {
+function Avatar({ name, avatar, size = "lg" }) {
   const initials = useMemo(() => {
     if (!name) return "DN";
     const parts = name.trim().split(/\s+/);
     return (parts[0]?.[0] || "") + (parts[1]?.[0] || "");
   }, [name]);
+
+  const sizeClasses = {
+    sm: "h-12 w-12 text-base",
+    md: "h-14 w-14 text-lg",
+    lg: "h-20 w-20 text-xl",
+    xl: "h-24 w-24 text-2xl"
+  };
 
   return (
     <div className="relative group">
@@ -100,10 +110,10 @@ function Avatar({ name, avatar }) {
         <img
           src={avatar}
           alt="avatar"
-          className="h-16 w-16 rounded-2xl object-cover border border-gray-200 dark:border-gray-700 group-hover:scale-105 transition-transform duration-200"
+          className={`rounded-2xl object-cover border-2 border-white shadow-lg ${sizeClasses[size]}`}
         />
       ) : (
-        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center text-lg font-semibold group-hover:scale-105 transition-transform duration-200">
+        <div className={`rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-semibold shadow-lg ${sizeClasses[size]}`}>
           {initials.toUpperCase()}
         </div>
       )}
@@ -114,7 +124,11 @@ function Avatar({ name, avatar }) {
 function formatDate(d) {
   if (!d) return "—";
   try {
-    return new Date(d).toLocaleDateString();
+    return new Date(d).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
   } catch {
     return "—";
   }
@@ -123,7 +137,13 @@ function formatDate(d) {
 function formatDateTime(d) {
   if (!d) return "—";
   try {
-    return new Date(d).toLocaleString();
+    return new Date(d).toLocaleString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   } catch {
     return "—";
   }
@@ -234,161 +254,174 @@ export default function ProfilePage() {
   const status = donor?.confirmation?.status || "Pending";
 
   return (
-    <div className="p-8 space-y-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-blue-50 p-4 md:p-8">
       {/* Toaster for notifications */}
       <Toaster
+        position="top-right"
         toastOptions={{
           success: {
-            className: "bg-green-50 text-green-800 rounded-lg p-3 flex items-center gap-2",
+            className: "bg-green-50 text-green-800 border border-green-200 rounded-xl p-4 flex items-center gap-2",
+            iconTheme: {
+              primary: '#10B981',
+              secondary: 'white',
+            },
           },
           error: {
-            className: "bg-red-50 text-red-800 rounded-lg p-3 flex items-center gap-2",
+            className: "bg-red-50 text-red-800 border border-red-200 rounded-xl p-4 flex items-center gap-2",
+            iconTheme: {
+              primary: '#EF4444',
+              secondary: 'white',
+            },
           },
         }}
       />
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Avatar name={donor?.name} avatar={donor?.avatar} />
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
-              My Profile
-            </h1>
-            <div className="mt-2 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-              <StatusChip value={status} />
-              <span className="text-gray-400 dark:text-gray-500">•</span>
-              <span>Last updated {formatDateTime(donor?.updatedAt)}</span>
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4 p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex items-center gap-4">
+            <Avatar name={donor?.name} avatar={donor?.avatar} size="xl" />
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                {donor?.name || "My Profile"}
+              </h1>
+              <div className="mt-2 flex items-center gap-3">
+                <StatusChip value={status} />
+                <span className="text-sm text-gray-500">Last updated {formatDateTime(donor?.updatedAt)}</span>
+              </div>
             </div>
           </div>
+          <div className="flex flex-col sm:flex-row items-stretch gap-2 w-full sm:w-auto mt-4 sm:mt-0">
+            <button
+              onClick={() => setOpenEdit(true)}
+              className="inline-flex items-center gap-2 rounded-xl bg-white border border-gray-200 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-all duration-200 shadow-sm"
+              aria-label="Edit profile"
+            >
+              <Edit3 size={16} /> Edit Profile
+            </button>
+            <button
+              onClick={load}
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded-xl bg-white border border-gray-200 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-all duration-200 shadow-sm disabled:opacity-60"
+              aria-label="Refresh profile"
+            >
+              <RotateCw size={16} className={loading ? "animate-spin" : ""} />
+              Refresh
+            </button>
+          </div>
         </div>
-        <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-          <button
-            onClick={() => setOpenEdit(true)}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-200 w-full sm:w-auto"
-            aria-label="Edit profile"
-          >
-            <Camera size={16} /> Edit Profile
-          </button>
-          <button
-            onClick={load}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-200 disabled:opacity-60 w-full sm:w-auto"
-            disabled={loading}
-            aria-label="Refresh profile"
-          >
-            <RotateCw size={16} className={loading ? "animate-spin" : ""} />
-            Refresh
-          </button>
-        </div>
-      </div>
 
-      {loading ? (
-        <Skeleton />
-      ) : err ? (
-        <div
-          className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 p-4 text-sm text-red-700 dark:text-red-300"
-          role="alert"
-        >
-          {err}
-        </div>
-      ) : !donor ? (
-        <p className="text-sm text-gray-600 dark:text-gray-400">No profile found.</p>
-      ) : (
-        <>
-          {/* Overview card */}
-          <div className="rounded-3xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-md hover:shadow-lg transition-shadow duration-200">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <InfoRow
-                icon={User2}
-                label="Full Name"
-                value={donor.name}
-                right={
-                  <button
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
-                    onClick={() => copy(donor.name)}
-                    title="Copy"
-                    aria-label="Copy full name"
-                  >
-                    <ClipboardCopy size={16} className="text-gray-600 dark:text-gray-400" />
-                  </button>
-                }
-              />
-              <InfoRow icon={Droplet} label="Blood Group" value={donor.bloodGroup} />
-              <InfoRow
-                icon={Calendar}
-                label="Date of Birth"
-                value={`${formatDate(donor.dateOfBirth)}${age !== null ? `  •  ${age} yrs` : ""}`}
-              />
-              <InfoRow
-                icon={Mail}
-                label="Email"
-                value={donor.email}
-                right={
-                  <button
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
-                    onClick={() => copy(donor.email)}
-                    title="Copy"
-                    aria-label="Copy email"
-                  >
-                    <ClipboardCopy size={16} className="text-gray-600 dark:text-gray-400" />
-                  </button>
-                }
-              />
-              <InfoRow
-                icon={Phone}
-                label="Phone"
-                value={donor.phone}
-                right={
-                  <button
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
-                    onClick={() => copy(donor.phone)}
-                    title="Copy"
-                    aria-label="Copy phone number"
-                  >
-                    <ClipboardCopy size={16} className="text-gray-600 dark:text-gray-400" />
-                  </button>
-                }
-              />
-              <InfoRow
-                icon={MapPin}
-                label="Nearest Hospital"
-                value={hospitalName || String(donor.nearestHospitalId)}
-                right={
-                  hospitalName ? (
-                    <span className="text-xs text-gray-500 dark:text-gray-400 px-2">
-                      ID: {String(donor.nearestHospitalId).slice(0, 6)}…
-                    </span>
-                  ) : null
-                }
-              />
+        {loading ? (
+          <Skeleton />
+        ) : err ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800 flex items-center gap-3">
+            <AlertCircle size={20} />
+            <div>
+              <h3 className="font-medium">Error loading profile</h3>
+              <p className="text-sm">{err}</p>
             </div>
           </div>
-
-          {/* Address & Medical */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Address */}
-            <div className="rounded-3xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-md hover:shadow-lg transition-shadow duration-200">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-medium flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                  <MapPin size={16} /> Address
+        ) : !donor ? (
+          <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
+            <p className="text-gray-500">No profile found.</p>
+          </div>
+        ) : (
+          <>
+            {/* Personal Info Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Personal Info Card */}
+              <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <User2 size={18} className="text-blue-600" />
+                  Personal Information
                 </h2>
+                <div className="space-y-3">
+                  <InfoRow
+                    icon={User2}
+                    label="Full Name"
+                    value={donor.name}
+                    right={
+                      <button
+                        className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                        onClick={() => copy(donor.name)}
+                        title="Copy"
+                        aria-label="Copy full name"
+                      >
+                        <ClipboardCopy size={16} className="text-gray-500" />
+                      </button>
+                    }
+                  />
+                  <InfoRow
+                    icon={Mail}
+                    label="Email"
+                    value={donor.email}
+                    right={
+                      <button
+                        className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                        onClick={() => copy(donor.email)}
+                        title="Copy"
+                        aria-label="Copy email"
+                      >
+                        <ClipboardCopy size={16} className="text-gray-500" />
+                      </button>
+                    }
+                  />
+                  <InfoRow
+                    icon={Phone}
+                    label="Phone"
+                    value={donor.phone}
+                    right={
+                      <button
+                        className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                        onClick={() => copy(donor.phone)}
+                        title="Copy"
+                        aria-label="Copy phone number"
+                      >
+                        <ClipboardCopy size={16} className="text-gray-500" />
+                      </button>
+                    }
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InfoRow icon={MapPin} label="Address Line" value={donor.addressLine1 || "—"} />
-                <InfoRow icon={MapPin} label="City" value={donor.city || "—"} />
-                <InfoRow icon={MapPin} label="District" value={donor.district || "—"} />
-                <InfoRow icon={Droplet} label="Weight (kg)" value={donor.weightKg ?? "—"} />
+
+              {/* Blood & Health Card */}
+              <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Heart size={18} className="text-red-600" />
+                  Blood & Health
+                </h2>
+                <div className="space-y-3">
+                  <InfoRow icon={Droplet} label="Blood Group" value={donor.bloodGroup} />
+                  <InfoRow 
+                    icon={Calendar} 
+                    label="Date of Birth" 
+                    value={`${formatDate(donor.dateOfBirth)}${age !== null ? ` • ${age} yrs` : ""}`} 
+                  />
+                  <InfoRow icon={Scale} label="Weight" value={donor.weightKg ? `${donor.weightKg} kg` : "—"} />
+                </div>
+              </div>
+
+              {/* Location Card */}
+              <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <MapPin size={18} className="text-green-600" />
+                  Location
+                </h2>
+                <div className="space-y-3">
+                  <InfoRow icon={MapPin} label="Nearest Hospital" value={hospitalName || String(donor.nearestHospitalId)} />
+                  <InfoRow icon={MapPin} label="Address" value={donor.addressLine1 || "—"} />
+                  <InfoRow icon={MapPin} label="City/District" value={donor.city && donor.district ? `${donor.city}, ${donor.district}` : (donor.city || donor.district || "—")} />
+                </div>
               </div>
             </div>
 
-            {/* Medical */}
-            <div className="rounded-3xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-md hover:shadow-lg transition-shadow duration-200">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-medium flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                  <Droplet size={16} /> Medical
-                </h2>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Medical Information */}
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Activity size={18} className="text-purple-600" />
+                Medical Information
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <InfoRow
                   icon={Calendar}
                   label="Last Donation Date"
@@ -404,12 +437,12 @@ export default function ProfilePage() {
                   value={donor.medical?.chronicIllness ? "Yes" : "No"}
                 />
                 <InfoRow
-                  icon={ClipboardCopy}
+                  icon={Pill}
                   label="Medications"
                   value={donor.medical?.medications || "—"}
                 />
                 <InfoRow
-                  icon={ShieldAlert}
+                  icon={FileText}
                   label="Recent Tattoo (months)"
                   value={
                     donor.medical?.recentTattooMonths != null
@@ -418,34 +451,33 @@ export default function ProfilePage() {
                   }
                 />
               </div>
-              <p className="mt-4 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-                <ChevronRight size={14} />
-                For medical eligibility or scheduling your next donation, please consult your nearest
-                hospital. This page only displays the information on file.
+              <p className="mt-6 text-sm text-gray-500 flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <ChevronRight size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                For medical eligibility or scheduling your next donation, please consult your nearest hospital. This page only displays the information on file.
               </p>
             </div>
-          </div>
 
-          {/* Meta */}
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Profile created {formatDateTime(donor?.createdAt)}
-          </div>
-        </>
-      )}
+            {/* Meta */}
+            <div className="text-xs text-gray-500 text-center py-4">
+              Profile created {formatDateTime(donor?.createdAt)}
+            </div>
+          </>
+        )}
 
-      {/* Edit modal */}
-      {openEdit && donor && (
-        <EditProfileModal
-          donor={donor}
-          onClose={() => setOpenEdit(false)}
-          onSaved={(updated) => {
-            setOpenEdit(false);
-            setDonor(updated);
-            toast.success("Profile updated", { icon: <CheckCircle size={16} /> });
-          }}
-          authFetch={authFetch}
-        />
-      )}
+        {/* Edit modal */}
+        {openEdit && donor && (
+          <EditProfileModal
+            donor={donor}
+            onClose={() => setOpenEdit(false)}
+            onSaved={(updated) => {
+              setOpenEdit(false);
+              setDonor(updated);
+              toast.success("Profile updated successfully");
+            }}
+            authFetch={authFetch}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -485,18 +517,18 @@ function EditProfileModal({ donor, onClose, onSaved, authFetch }) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) {
-      toast.error("Please choose an image (jpg, png, webp, gif)", { icon: <AlertCircle size={16} /> });
+      toast.error("Please choose an image (jpg, png, webp, gif)");
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      toast.error("Max image size is 2MB", { icon: <AlertCircle size={16} /> });
+      toast.error("Max image size is 2MB");
       return;
     }
     try {
       const dataUrl = await fileToDataURL(file);
       setAvatar(String(dataUrl));
     } catch {
-      toast.error("Failed to load image", { icon: <AlertCircle size={16} /> });
+      toast.error("Failed to load image");
     }
   };
 
@@ -535,7 +567,7 @@ function EditProfileModal({ donor, onClose, onSaved, authFetch }) {
       const j = await res.json();
       onSaved?.(j.donor);
     } catch (e) {
-      toast.error(e.message || "Update failed", { icon: <AlertCircle size={16} /> });
+      toast.error(e.message || "Update failed");
     } finally {
       setBusy(false);
     }
@@ -547,22 +579,22 @@ function EditProfileModal({ donor, onClose, onSaved, authFetch }) {
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-4xl rounded-3xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl transform transition-all duration-300">
-        <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2.5">
-            <User2 size={18} className="text-gray-700 dark:text-gray-300" />
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Edit Profile</h3>
+      <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-gray-200 bg-white shadow-xl">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+          <div className="flex items-center gap-3">
+            <User2 size={20} className="text-blue-600" />
+            <h3 className="text-xl font-semibold text-gray-900">Edit Profile</h3>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
+            className="rounded-lg p-2 hover:bg-gray-100 transition-colors"
             aria-label="Close modal"
           >
-            <X size={18} className="text-gray-600 dark:text-gray-400" />
+            <X size={20} className="text-gray-500" />
           </button>
         </div>
 
-        <form onSubmit={submit} className="p-6 grid grid-cols-1 gap-6">
+        <form onSubmit={submit} className="p-6 space-y-6">
           {/* Avatar uploader */}
           <div className="flex items-center gap-4">
             {avatar ? (
@@ -570,11 +602,11 @@ function EditProfileModal({ donor, onClose, onSaved, authFetch }) {
                 <img
                   src={avatar}
                   alt="preview"
-                  className="h-16 w-16 rounded-xl object-cover border border-gray-200 dark:border-gray-700"
+                  className="h-20 w-20 rounded-xl object-cover border border-gray-200"
                 />
                 <button
                   onClick={() => setAvatar("")}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors duration-200"
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
                   title="Remove avatar"
                   aria-label="Remove avatar"
                 >
@@ -582,173 +614,192 @@ function EditProfileModal({ donor, onClose, onSaved, authFetch }) {
                 </button>
               </div>
             ) : (
-              <div className="h-16 w-16 rounded-xl bg-gray-200 dark:bg-gray-700" />
+              <div className="h-20 w-20 rounded-xl bg-gray-200 flex items-center justify-center">
+                <Camera size={24} className="text-gray-400" />
+              </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Profile Picture
               </label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={onPickImage}
-                className="block text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 dark:file:bg-blue-900/30 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-900 transition-colors duration-200"
+                className="block text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-colors"
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-gray-500 mt-1">
                 JPG/PNG/WebP/GIF, up to 2MB.
               </p>
             </div>
           </div>
 
-          {/* Basics */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Full Name">
-              <input
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                placeholder="Enter your full name"
-              />
-            </Field>
-            <Field label="Email">
-              <input
-                type="email"
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="Enter your email"
-              />
-            </Field>
-            <Field label="Phone">
-              <input
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-                placeholder="Enter your phone number"
-              />
-            </Field>
-            <Field label="Date of Birth">
-              <input
-                type="date"
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
-                required
-              />
-            </Field>
-            <Field label="Blood Group">
-              <select
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                value={bloodGroup}
-                onChange={(e) => setBloodGroup(e.target.value)}
-                required
-              >
-                {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Weight (kg)">
-              <input
-                type="number"
-                min={40}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                value={weightKg}
-                onChange={(e) => setWeightKg(e.target.value)}
-                required
-                placeholder="Enter your weight"
-              />
-            </Field>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Personal Info */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-2">Personal Information</h4>
+              
+              <Field label="Full Name">
+                <input
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  placeholder="Enter your full name"
+                />
+              </Field>
+              <Field label="Email">
+                <input
+                  type="email"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="Enter your email"
+                />
+              </Field>
+              <Field label="Phone">
+                <input
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                  placeholder="Enter your phone number"
+                />
+              </Field>
+              <Field label="Date of Birth">
+                <input
+                  type="date"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  required
+                />
+              </Field>
+            </div>
+
+            {/* Health Info */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-2">Health Information</h4>
+              
+              <Field label="Blood Group">
+                <select
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  value={bloodGroup}
+                  onChange={(e) => setBloodGroup(e.target.value)}
+                  required
+                >
+                  <option value="">Select blood group</option>
+                  {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Weight (kg)">
+                <input
+                  type="number"
+                  min={40}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  value={weightKg}
+                  onChange={(e) => setWeightKg(e.target.value)}
+                  required
+                  placeholder="Enter your weight"
+                />
+              </Field>
+              <Field label="Last Donation Date">
+                <input
+                  type="date"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  value={lastDonationDate}
+                  onChange={(e) => setLastDonationDate(e.target.value)}
+                />
+              </Field>
+              <Field label="Chronic Illness">
+                <select
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  value={chronicIllness ? "yes" : "no"}
+                  onChange={(e) => setChronicIllness(e.target.value === "yes")}
+                >
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </Field>
+            </div>
           </div>
 
-          {/* Address */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="Address Line">
-              <input
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                value={addressLine1}
-                onChange={(e) => setAddressLine1(e.target.value)}
-                placeholder="Enter address line"
-              />
-            </Field>
-            <Field label="City">
-              <input
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Enter city"
-              />
-            </Field>
-            <Field label="District">
-              <input
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
-                required
-                placeholder="Enter district"
-              />
-            </Field>
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Address */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-2">Address</h4>
+              
+              <Field label="Address Line">
+                <input
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  value={addressLine1}
+                  onChange={(e) => setAddressLine1(e.target.value)}
+                  placeholder="Enter address line"
+                />
+              </Field>
+              <Field label="City">
+                <input
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Enter city"
+                />
+              </Field>
+              <Field label="District">
+                <input
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  required
+                  placeholder="Enter district"
+                />
+              </Field>
+            </div>
 
-          {/* Medical */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Last Donation Date">
-              <input
-                type="date"
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                value={lastDonationDate}
-                onChange={(e) => setLastDonationDate(e.target.value)}
-              />
-            </Field>
-            <Field label="Chronic Illness">
-              <select
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                value={chronicIllness ? "yes" : "no"}
-                onChange={(e) => setChronicIllness(e.target.value === "yes")}
-              >
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-              </select>
-            </Field>
-            <Field label="Medications">
-              <input
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                value={medications}
-                onChange={(e) => setMedications(e.target.value)}
-                placeholder="Enter medications (optional)"
-              />
-            </Field>
-            <Field label="Recent Tattoo (months)">
-              <input
-                type="number"
-                min={0}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                value={recentTattooMonths}
-                onChange={(e) => setRecentTattooMonths(e.target.value)}
-                placeholder="Enter months since tattoo"
-              />
-            </Field>
+            {/* Medical Details */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-2">Medical Details</h4>
+              
+              <Field label="Medications">
+                <input
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  value={medications}
+                  onChange={(e) => setMedications(e.target.value)}
+                  placeholder="Enter medications (optional)"
+                />
+              </Field>
+              <Field label="Recent Tattoo (months)">
+                <input
+                  type="number"
+                  min={0}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  value={recentTattooMonths}
+                  onChange={(e) => setRecentTattooMonths(e.target.value)}
+                  placeholder="Enter months since tattoo"
+                />
+              </Field>
+            </div>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-2 pt-4">
+          <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-200 sticky bottom-0 bg-white py-4">
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-200"
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
               aria-label="Cancel changes"
             >
-              <X size={16} /> Cancel
+              Cancel
             </button>
             <button
               type="submit"
               disabled={busy}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-2 text-sm hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-60 transition-all duration-200"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2.5 hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-60 transition-all"
               aria-label="Save changes"
             >
               <Save size={16} />
@@ -765,7 +816,7 @@ function EditProfileModal({ donor, onClose, onSaved, authFetch }) {
 function Field({ label, children }) {
   return (
     <label className="block">
-      <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+      <span className="block text-sm font-medium text-gray-700 mb-1.5">
         {label}
       </span>
       {children}
