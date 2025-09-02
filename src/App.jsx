@@ -9,6 +9,7 @@ import HomeLayout from "./Donor/Layouts/HomeLayout";
 import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import ProfilePage from "./Donor/Pages/ProfilePage";
+import CampaignLayout from "./Donor/Layouts/CampaignLayout";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
             <Route path="/management" element={<AppManagement />} />
           </Route>
           <Route path="/profile" element={<ProfilePage/>}/>
+          <Route path="/campaigns" element={<CampaignLayout/>}/>
         </Routes>
       </AuthProvider>
     </>

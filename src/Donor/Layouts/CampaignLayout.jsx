@@ -1,18 +1,16 @@
 import React from 'react'
-import Home from '../Pages/Home'
 import Navbar from '../components/navbar'
-import AboutBlood from '../Pages/AboutBlood'
+import Campaings from '../Pages/Campaings'
 import Footer from '../Pages/footer'
 
-function HomeLayout() {
+function CampaignLayout() {
   return (
     <div className='font-Outfit'>
       <Navbar/>
-      <Home/>
-      <AboutBlood/>
+      <Campaings/>
       <Footer/>
     </div>
   )
 }
 
-export default HomeLayout
+export default CampaignLayout
