@@ -2,7 +2,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
-  CheckCircle2,
   Clock,
   Droplet,
   MapPin,
@@ -26,12 +25,8 @@ const SLOT_LABEL = {
   SLOT2: "12:00 – 13:30",
 };
 
-function fmtDate(d) {
-  try { return new Date(d).toLocaleDateString(); } catch { return "—"; }
-}
-function fmtDateTime(d) {
-  try { return new Date(d).toLocaleString(); } catch { return "—"; }
-}
+function fmtDate(d) { try { return new Date(d).toLocaleDateString(); } catch { return "—"; } }
+function fmtDateTime(d) { try { return new Date(d).toLocaleString(); } catch { return "—"; } }
 
 const StatusChip = ({ value }) => {
   const map = {
@@ -39,10 +34,7 @@ const StatusChip = ({ value }) => {
     Approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
     Cancelled: "bg-rose-50 text-rose-700 border-rose-200",
   };
-  const Icon =
-    value === "Approved" ? ShieldCheck :
-    value === "Cancelled" ? ShieldAlert : Clock;
-
+  const Icon = value === "Approved" ? ShieldCheck : value === "Cancelled" ? ShieldAlert : Clock;
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${map[value] || map.Pending}`}>
       <Icon size={14} />
@@ -54,7 +46,6 @@ const StatusChip = ({ value }) => {
 export default function Appointments() {
   const { authFetch, user, role } = useAuth();
 
-  // Figure out role + ids safely from context or persisted user
   const authUser = useMemo(
     () => user || (localStorage.getItem("auth_user") ? JSON.parse(localStorage.getItem("auth_user")) : null),
     [user]
@@ -63,15 +54,13 @@ export default function Appointments() {
   const donorId = roleLower === "donor" ? (authUser?.donorId || authUser?._id || authUser?.id || null) : null;
   const hospitalId = roleLower === "hospital" ? (authUser?.hospitalId || authUser?._id || authUser?.id || null) : null;
 
-  // data
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // filters
-  const [qStatus, setQStatus] = useState(""); // all by default
+  const [qStatus, setQStatus] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
@@ -85,25 +74,21 @@ export default function Appointments() {
       url.searchParams.set("page", String(p));
       url.searchParams.set("limit", String(PAGE_SIZE));
       url.searchParams.set("sort", "-createdAt");
-
-      // Role-scoped filters
       if (roleLower === "donor" && donorId) url.searchParams.set("donorId", donorId);
       if (roleLower === "hospital" && hospitalId) url.searchParams.set("hospitalId", hospitalId);
-
-      // User filters
       if (qStatus) url.searchParams.set("status", qStatus);
       if (from) url.searchParams.set("from", from);
       if (to) url.searchParams.set("to", to);
 
       const res = await authFetch(url.toString());
+      const text = await res.text(); // capture message even on error
+      const data = text ? JSON.parse(text) : {};
       if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.message || "Failed to load appointments");
+        throw new Error(data.message || "Failed to load appointments");
       }
-      const j = await res.json();
-      setRows(j.appointments || []);
-      setTotal(j.total || 0);
-      setPage(j.page || 1);
+      setRows(data.appointments || []);
+      setTotal(data.total || 0);
+      setPage(data.page || 1);
     } catch (e) {
       setErr(e.message || "Failed to load");
     } finally {
@@ -116,13 +101,15 @@ export default function Appointments() {
   const approve = async (id) => {
     try {
       const res = await authFetch(`${API_BASE}/api/appointments/${id}/approve`, { method: "PATCH" });
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
       if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.message || "Approve failed");
+        throw new Error(data.message || "Approve failed");
       }
       toast.success("Appointment approved");
       load(page);
     } catch (e) {
+      // Surface 403 reasons clearly
       toast.error(e.message || "Approve failed");
     }
   };
@@ -131,9 +118,10 @@ export default function Appointments() {
     if (!confirm("Cancel this appointment?")) return;
     try {
       const res = await authFetch(`${API_BASE}/api/appointments/${id}`, { method: "DELETE" });
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
       if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.message || "Cancel failed");
+        throw new Error(data.message || "Cancel failed");
       }
       toast.success("Appointment cancelled");
       load(page);
@@ -142,9 +130,18 @@ export default function Appointments() {
     }
   };
 
+  // Approve button visible only if:
+  // - admin, or
+  // - hospital AND this appointment belongs to THIS hospital
+  const canApprove = (row) => {
+    if (roleLower === "admin") return true;
+    if (roleLower !== "hospital" || !hospitalId) return false;
+    const apptHospId = typeof row.hospitalId === "object" ? row.hospitalId?._id : row.hospitalId;
+    return String(hospitalId) === String(apptHospId);
+  };
+
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-100 rounded-lg">
@@ -156,12 +153,9 @@ export default function Appointments() {
                roleLower === "hospital" ? "Hospital Appointments" :
                "All Appointments"}
             </h1>
-            <p className="text-xs text-gray-600">
-              View, filter and manage blood donation appointments
-            </p>
+            <p className="text-xs text-gray-600">View, filter and manage blood donation appointments</p>
           </div>
         </div>
-
         <button
           onClick={() => load(1)}
           className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm hover:bg-gray-50"
@@ -170,10 +164,9 @@ export default function Appointments() {
         </button>
       </div>
 
-      {/* Filters */}
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <div className="md:col-span-1">
+          <div>
             <label className="block text-xs text-gray-600 mb-1">Status</label>
             <select
               className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm"
@@ -181,55 +174,28 @@ export default function Appointments() {
               onChange={(e) => setQStatus(e.target.value)}
             >
               <option value="">All</option>
-              {STATUS.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
+              {STATUS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-
           <div>
-            <label className="block text-xs text-gray-600 mb-1">From (YYYY-MM-DD)</label>
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm"
-            />
+            <label className="block text-xs text-gray-600 mb-1">From</label>
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm" />
           </div>
-
           <div>
-            <label className="block text-xs text-gray-600 mb-1">To (YYYY-MM-DD)</label>
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm"
-            />
+            <label className="block text-xs text-gray-600 mb-1">To</label>
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm" />
           </div>
-
           <div className="md:col-span-2 flex items-end gap-2">
-            <button
-              onClick={() => load(1)}
-              className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700"
-            >
+            <button onClick={() => load(1)} className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700">
               <Search size={16} /> Apply
             </button>
-            <button
-              onClick={() => {
-                setQStatus("");
-                setFrom("");
-                setTo("");
-                load(1);
-              }}
-              className="inline-flex items-center gap-2 border border-gray-300 px-4 py-2 rounded-xl hover:bg-gray-50"
-            >
+            <button onClick={() => { setQStatus(""); setFrom(""); setTo(""); load(1); }} className="inline-flex items-center gap-2 border border-gray-300 px-4 py-2 rounded-xl hover:bg-gray-50">
               <X size={16} /> Clear
             </button>
           </div>
         </div>
       </div>
 
-      {/* Table */}
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-x-auto">
         {loading ? (
           <div className="p-6 text-sm text-gray-600">Loading…</div>
@@ -253,12 +219,7 @@ export default function Appointments() {
             <tbody>
               {rows.map((r) => (
                 <tr key={r._id} className="border-t">
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <CalendarDays size={14} className="text-gray-400" />
-                      {fmtDate(r.day)}
-                    </div>
-                  </td>
+                  <td className="py-3 px-4">{fmtDate(r.day)}</td>
                   <td className="py-3 px-4">{SLOT_LABEL[r.slot] || r.slot}</td>
                   <td className="py-3 px-4"><StatusChip value={r.status} /></td>
                   <td className="py-3 px-4">
@@ -276,8 +237,7 @@ export default function Appointments() {
                   <td className="py-3 px-4">{r.note || "—"}</td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
-                      {/* Approve: hospital/admin only; not if already Approved/Cancelled */}
-                      {(roleLower === "hospital" || roleLower === "admin") && r.status === "Pending" && (
+                      {r.status === "Pending" && canApprove(r) && (
                         <button
                           onClick={() => approve(r._id)}
                           className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700"
@@ -286,8 +246,6 @@ export default function Appointments() {
                           <Check size={14} /> Approve
                         </button>
                       )}
-
-                      {/* Cancel: donor (own), hospital (own) or admin; not if Cancelled */}
                       {r.status !== "Cancelled" && (
                         <button
                           onClick={() => cancel(r._id)}
@@ -313,31 +271,17 @@ export default function Appointments() {
         )}
       </div>
 
-      {/* Pagination */}
       {!loading && rows.length > 0 && (
         <div className="flex items-center justify-between text-sm">
           <div className="text-gray-600">
-            Showing <span className="font-medium">{(page - 1) * PAGE_SIZE + 1}</span>–<span className="font-medium">
-              {Math.min(page * PAGE_SIZE, total)}
-            </span>{" "}
-            of <span className="font-medium">{total}</span>
+            Showing <span className="font-medium">{(page - 1) * PAGE_SIZE + 1}</span>–
+            <span className="font-medium">{Math.min(page * PAGE_SIZE, total)}</span> of{" "}
+            <span className="font-medium">{total}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              disabled={page <= 1}
-              onClick={() => load(page - 1)}
-              className="px-3 py-1.5 rounded-lg border disabled:opacity-50 hover:bg-gray-50"
-            >
-              Prev
-            </button>
-            <div className="px-2">{page} / {pages}</div>
-            <button
-              disabled={page >= pages}
-              onClick={() => load(page + 1)}
-              className="px-3 py-1.5 rounded-lg border disabled:opacity-50 hover:bg-gray-50"
-            >
-              Next
-            </button>
+            <button disabled={page <= 1} onClick={() => load(page - 1)} className="px-3 py-1.5 rounded-lg border disabled:opacity-50 hover:bg-gray-50">Prev</button>
+            <div className="px-2">{page} / {Math.max(1, Math.ceil(total / PAGE_SIZE))}</div>
+            <button disabled={page * PAGE_SIZE >= total} onClick={() => load(page + 1)} className="px-3 py-1.5 rounded-lg border disabled:opacity-50 hover:bg-gray-50">Next</button>
           </div>
         </div>
       )}
