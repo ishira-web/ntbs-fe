@@ -108,7 +108,7 @@ export default function ManageAppointments() {
     <div className="p-6 space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold flex items-center gap-2">
-          <CalendarCheck2 size={18} /> Manage Appointments
+          <CalendarCheck2 size={18} /> Manage Requests
         </h1>
         <div className="flex items-center gap-2">
           <button onClick={() => setOpenNew(true)} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-900 text-white px-3 py-2 text-sm hover:bg-black">
