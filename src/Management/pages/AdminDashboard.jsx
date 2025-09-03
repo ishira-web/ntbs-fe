@@ -126,7 +126,7 @@ export default function AdminDashboard() {
       setSummary(sData);
 
       // 2) Donors total
-      const dRes = await authFetch(`${API_BASE}/api/donors?limit=1`);
+      const dRes = await authFetch(`${API_BASE}/api/donor?limit=1`);
       if (dRes.ok) {
         const d = await dRes.json();
         setDonorsTotal(Number(d.total || 0));
@@ -147,7 +147,7 @@ export default function AdminDashboard() {
 
       // 4) Hospitals total (optional route support)
       try {
-        const hRes = await authFetch(`${API_BASE}/api/hospitals?limit=1`);
+        const hRes = await authFetch(`${API_BASE}/api/hospital?limit=1`);
         if (hRes.ok) {
           const h = await hRes.json();
           setHospitalsTotal(Number(h.total || 0));

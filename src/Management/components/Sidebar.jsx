@@ -13,13 +13,14 @@ import {
 const commonItems = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "blood", label: "Manage Blood Stock", icon: Droplet },
-  { key: "appointments", label: "Manage Appointments", icon: CalendarCheck2 },
+  { key: "appointments", label: "Manage Requests", icon: CalendarCheck2 },
   { key: "campaigns", label: "Manage Campaigns", icon: Megaphone },
   { key: "users", label: "Manage Users", icon: Users },
+  { key: "request", label:"Manage Appoinments",icon:CalendarCheck2}
 ];
 
 const adminOnly = [
-  { key: "hospitals", label: "Manage Hospitals", icon: Building2 },
+  { key: "hospitals", label: "Manage Hospitals", icon: Building2 }, 
 ];
 
 export default function Sidebar({ role, active, onNavigate, open, onToggle }) {

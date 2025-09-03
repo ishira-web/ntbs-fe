@@ -12,6 +12,7 @@ import ManageBloodStock from "./pages/ManageBloodStock";
 import ManageHospitals from "./pages/ManageHospitals";
 import ManageAppointments from "./pages/ManageAppointments";
 import ManageCampaigns from "./pages/ManageCampaigns";
+import Requests from '../Management/pages/Appoinments'
 
 export default function AppManagement() {
   const { role, user } = useAuth(); // ← get real role/user from context
@@ -31,16 +32,17 @@ export default function AppManagement() {
   const isHospital = role === "hospital"
   const Page = useMemo(() => {
     if (active === "dashboard") return isAdmin ? AdminDashboard : HospitalDashboard;
-    if (active === "users") return  isHospital ? ManageUsers : HospitalDashboard;
+    if (active === "users") return   ManageUsers;
     if (active === "hospitals") return isAdmin ? ManageHospitals : HospitalDashboard;
     if (active === "blood") return ManageBloodStock;
     if (active === "appointments") return ManageAppointments;
     if (active === "campaigns") return ManageCampaigns;
+    if(active === "request") return Requests;
     return () => <div className="p-6">Not found</div>;
   }, [active, isAdmin]);
 
   return (
-    <div className="min-h-screen w-full bg-gray-50 text-gray-900 flex">
+    <div className="min-h-screen w-full bg-gray-50 text-gray-900 flex font-Outfit">
       <Sidebar
         role={role}
         active={active}

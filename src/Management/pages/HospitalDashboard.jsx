@@ -115,7 +115,7 @@ export default function HospitalDashboard() {
       // Try both common endpoints to be robust: /api/hospitals/:id then /api/hospital/:id
       let name = "";
       try {
-        const res1 = await authFetch(`${API_BASE}/api/hospitals/${hospitalId}`);
+        const res1 = await authFetch(`${API_BASE}/api/hospital/${hospitalId}`);
         if (res1.ok) {
           const d = await res1.json();
           name = d?.hospital?.name || d?.name || "";
