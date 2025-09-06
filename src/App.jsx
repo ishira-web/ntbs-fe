@@ -11,6 +11,7 @@ import ProfilePage from "./Donor/Pages/ProfilePage";
 import CampaignLayout from "./Donor/Layouts/CampaignLayout";
 import LearnLayout from "./Donor/Layouts/LearnLayout";
 import HospitalLayout from "./Donor/Layouts/HospitalLayout";
+import Register from "./Login/Register";
 
 
 function App() {
@@ -28,7 +29,7 @@ function App() {
           <Route path="/campaigns" element={<CampaignLayout/>}/>
           <Route path="/learn" element={<LearnLayout/>}/>
           <Route path="/hospitals" element={<HospitalLayout/>}/>
-      
+          <Route path="/register" element={<Register />}/>
         </Routes>
       </AuthProvider>
     </>
