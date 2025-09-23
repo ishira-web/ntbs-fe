@@ -1,5 +1,5 @@
 // src/pages/Campaings.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Megaphone,
   Search,
@@ -9,18 +9,19 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
-  Users,
-  Droplet,
+  Building2,
+  Image as ImageIcon,
+  Link as LinkIcon,
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 const PAGE_SIZE = 12;
-const CAMP_STATUSES = ["planned", "scheduled", "ongoing", "completed", "cancelled"];
+// Align with your mongoose enum
+const CAMP_STATUSES = ["planned", "ongoing", "completed", "cancelled"];
 
 const StatusChip = ({ value }) => {
   const color = {
     planned: "bg-slate-100 text-slate-700 border-slate-200",
-    scheduled: "bg-indigo-100 text-indigo-700 border-indigo-200",
     ongoing: "bg-emerald-100 text-emerald-700 border-emerald-200",
     completed: "bg-gray-100 text-gray-700 border-gray-200",
     cancelled: "bg-rose-100 text-rose-700 border-rose-200",
@@ -33,10 +34,19 @@ const StatusChip = ({ value }) => {
 };
 
 const fmtDate = (d) => {
-  try { return new Date(d).toLocaleString(); } catch { return "—"; }
+  if (!d) return "—";
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? "—" : dt.toLocaleString();
 };
 const toISOStart = (d) => (d ? `${d}T00:00:00.000Z` : "");
 const toISOEnd = (d) => (d ? `${d}T23:59:59.999Z` : "");
+
+// Build a Google Maps URL: prefer locationUrl; fallback to search(query)
+const buildMapUrl = (locationUrl, venue, hospitalName) => {
+  if (locationUrl && /^https?:\/\//i.test(locationUrl)) return locationUrl;
+  const q = [venue, hospitalName].filter(Boolean).join(", ");
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+};
 
 export default function Campaings() {
   const [rows, setRows] = useState([]);
@@ -79,7 +89,8 @@ export default function Campaings() {
         throw new Error(d.message || "Failed to load campaigns");
       }
       const j = await res.json();
-      setRows(j.camps || []);
+      // support both { data } and { camps } shapes
+      setRows(j.data || j.camps || []);
       setTotal(j.total || 0);
       setPage(j.page || 1);
     } catch (e) {
@@ -134,7 +145,7 @@ export default function Campaings() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search name, organizer, city, district"
+              placeholder="Search title, hospital, organization, venue"
               className="w-full px-2 py-2 text-sm outline-none"
             />
           </div>
@@ -185,7 +196,7 @@ export default function Campaings() {
           </button>
           <span className="mx-2 h-4 w-px bg-gray-200" />
           <Quick label="All" v="" />
-          <Quick label="Upcoming" v="scheduled" />
+          <Quick label="Upcoming" v="planned" />
           <Quick label="Ongoing" v="ongoing" />
           <Quick label="Completed" v="completed" />
         </div>
@@ -204,46 +215,82 @@ export default function Campaings() {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {rows.map((c) => (
-                <button
-                  key={c._id}
-                  onClick={() => setOpen(c)}
-                  className="text-left rounded-2xl border border-gray-200 p-4 hover:bg-gray-50 transition"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="font-medium truncate">{c.name}</div>
-                      <div className="mt-0.5 text-xs text-gray-500 truncate">
-                        {c.organizer || "—"}
+              {rows.map((c) => {
+                const posterSrc = c.posterImg ? `${API_BASE}/${c.posterImg}` : null;
+                const mapUrl = buildMapUrl(c.locationUrl, c.venue, c.hospitalName);
+                return (
+                  <div
+                    key={c._id}
+                    className="rounded-2xl border border-gray-200 p-4 hover:bg-gray-50 transition flex flex-col"
+                  >
+                    {/* Top: Title + Status */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{c.title}</div>
+                        <div className="mt-0.5 text-xs text-gray-500 truncate">
+                          {c.hospitalName || "—"}{c.organization ? ` • ${c.organization}` : ""}
+                        </div>
+                      </div>
+                      <StatusChip value={c.status} />
+                    </div>
+
+                    {/* Poster */}
+                    <div className="mt-3">
+                      {posterSrc ? (
+                        <img
+                          src={posterSrc}
+                          alt="poster"
+                          className="w-full h-40 object-cover rounded-lg border"
+                          onError={(e) => (e.currentTarget.style.display = "none")}
+                        />
+                      ) : (
+                        <div className="w-full h-40 rounded-lg border flex items-center justify-center text-gray-400">
+                          <ImageIcon size={20} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="mt-3 space-y-1 text-sm text-gray-700">
+                      <div className="flex items-center gap-2">
+                        <CalendarDays size={16} className="text-gray-500" />
+                        <span className="truncate">
+                          {fmtDate(c.startAt)} → {fmtDate(c.endAt)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin size={16} className="text-gray-500" />
+                        <span className="truncate">{c.venue || "—"}</span>
                       </div>
                     </div>
-                    <StatusChip value={c.status} />
-                  </div>
 
-                  <div className="mt-3 space-y-1 text-sm text-gray-700">
-                    <div className="flex items-center gap-2">
-                      <CalendarDays size={16} className="text-gray-500" />
-                      <span className="truncate">
-                        {fmtDate(c.startAt)} → {fmtDate(c.endAt)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin size={16} className="text-gray-500" />
-                      <span className="truncate">
-                        {(c.location?.addressLine1 ? c.location.addressLine1 + ", " : "")}
-                        {c.location?.city || ""}{c.location?.city && c.location?.district ? ", " : ""}
-                        {c.location?.district || ""}
-                      </span>
+                    {/* Actions */}
+                    <div className="mt-3 flex items-center justify-between">
+                      <button
+                        onClick={() => setOpen(c)}
+                        className="inline-flex items-center gap-2 text-sm rounded-lg border px-3 py-1.5 hover:bg-gray-50"
+                      >
+                        <Info size={14} /> Details
+                      </button>
+                      <a
+                        href={mapUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 text-sm rounded-lg border px-3 py-1.5 hover:bg-gray-50 text-blue-700"
+                        title="Open in Google Maps"
+                      >
+                        <LinkIcon size={14} /> Open in Maps
+                      </a>
                     </div>
                   </div>
-                </button>
-              ))}
+                );
+              })}
             </div>
 
             {/* Pagination */}
             <div className="mt-4 flex items-center justify-between text-sm">
               <span className="text-gray-600">
-                Page {page} of {Math.max(1, Math.ceil(total / PAGE_SIZE))} • {total} total
+                Page {page} of {pages} • {total} total
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -288,13 +335,16 @@ function SkeletonGrid() {
 }
 
 function DetailModal({ camp, onClose }) {
+  const mapUrl = buildMapUrl(camp.locationUrl, camp.venue, camp.hospitalName);
+  const posterSrc = camp.posterImg ? `${API_BASE}/${camp.posterImg}` : null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true">
       <div className="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white shadow-xl">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <Megaphone size={18} />
-            <h3 className="font-semibold">{camp.name}</h3>
+            <h3 className="font-semibold">{camp.title}</h3>
           </div>
           <button
             onClick={onClose}
@@ -305,45 +355,40 @@ function DetailModal({ camp, onClose }) {
         </div>
 
         <div className="p-4 space-y-4">
+          {/* Poster */}
+          {posterSrc && (
+            <img
+              src={posterSrc}
+              alt="poster"
+              className="w-full h-52 object-cover rounded-lg border"
+              onError={(e) => (e.currentTarget.style.display = "none")}
+            />
+          )}
+
           <div className="flex flex-wrap items-center gap-2">
             <StatusChip value={camp.status} />
-            <span className="text-xs text-gray-500">
-              ID: {camp._id}
-            </span>
+            <span className="text-xs text-gray-500">ID: {camp._id}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Row icon={Building2} label="Hospital" value={camp.hospitalName || "—"} />
+            <Row icon={Info} label="Organization" value={camp.organization || "—"} />
             <Row icon={CalendarDays} label="Start" value={fmtDate(camp.startAt)} />
             <Row icon={CalendarDays} label="End" value={fmtDate(camp.endAt)} />
-            <Row icon={Info} label="Organizer" value={camp.organizer || "—"} />
-            <Row
-              icon={MapPin}
-              label="Location"
-              value={
-                (camp.location?.addressLine1 ? camp.location.addressLine1 + ", " : "") +
-                (camp.location?.city || "") +
-                (camp.location?.city && camp.location?.district ? ", " : "") +
-                (camp.location?.district || "")
-              }
-            />
-            <Row
-              icon={Users}
-              label="Expected Donors"
-              value={camp.expectedDonors ?? 0}
-            />
-            <Row
-              icon={Droplet}
-              label="Capacity"
-              value={camp.capacity ?? 0}
-            />
+            <Row icon={MapPin} label="Venue" value={camp.venue || "—"} />
           </div>
 
-          {camp.notes ? (
-            <div className="rounded-xl border border-gray-200 p-3 text-sm">
-              <div className="text-gray-500 text-xs mb-1">Notes</div>
-              <div>{camp.notes}</div>
-            </div>
-          ) : null}
+          <div className="flex items-center justify-end gap-2">
+            <a
+              href={mapUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 text-sm rounded-lg border px-3 py-1.5 hover:bg-gray-50 text-blue-700"
+              title="Open in Google Maps"
+            >
+              <LinkIcon size={14} /> Open in Maps
+            </a>
+          </div>
         </div>
       </div>
     </div>
