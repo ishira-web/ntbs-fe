@@ -6,13 +6,26 @@ import {
   Link as LinkIcon, Image as ImageIcon
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { useAuth } from "../../auth/AuthContext";
 
-// --- Config ---
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
+const API_BASE = import.meta.env?.VITE_API_BASE || "http://localhost:5000";
 const PAGE_SIZE = 10;
-// exactly as your schema enum:
 const CAMP_STATUSES = ["planned", "ongoing", "completed", "cancelled"];
+
+// attach token from localStorage if you’re using JWT
+const getToken = () => localStorage.getItem("auth_token");
+
+async function apiFetch(url, options = {}) {
+  const headers = new Headers(options.headers || {});
+  const token = getToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  const isForm = options.body instanceof FormData;
+  if (!isForm && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  if (isForm && headers.has("Content-Type")) headers.delete("Content-Type");
+
+  const res = await fetch(url, { ...options, headers });
+  return res;
+}
 
 function StatusChip({ value }) {
   const palette = {
@@ -30,76 +43,40 @@ function StatusChip({ value }) {
 }
 
 export default function ManageCampaigns() {
-  const { authFetch, user } = useAuth();
-
-  // table state
   const [rows, setRows] = useState([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // dialogs
+  const [q, setQ] = useState("");
+  const [status, setStatus] = useState("");
+
   const [openNew, setOpenNew] = useState(false);
   const [editing, setEditing] = useState(null);
 
-  // filters
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-
-  // role & hospital context
-  const role = useMemo(
-    () => user?.role || JSON.parse(localStorage.getItem("auth_user") || "{}")?.role,
-    [user]
-  );
-  const hospitalId = useMemo(() => {
-    const localUser = user || (localStorage.getItem("auth_user") ? JSON.parse(localStorage.getItem("auth_user")) : null);
-    return localUser?.hospitalId || null;
-  }, [user]);
-  const [hospitalName, setHospitalName] = useState("");
-
-  // load hospital name if role is hospital
-  useEffect(() => {
-    const run = async () => {
-      if (role === "hospital" && hospitalId) {
-        try {
-          const res = await authFetch(`${API_BASE}/api/hospital/${hospitalId}`);
-          if (!res.ok) throw new Error("Failed to load hospital");
-          const data = await res.json();
-          setHospitalName(data?.name || data?.hospitalName || "");
-        } catch (e) {
-          console.error(e);
-          toast.error("Could not load hospital details");
-        }
-      }
-    };
-    run();
-  }, [role, hospitalId, authFetch]);
-
-  const load = async (pageNum = page) => {
+  const load = async (p = page) => {
     setLoading(true);
     setErr("");
     try {
       const url = new URL(`${API_BASE}/api/camps`);
+      url.searchParams.set("page", p);
+      url.searchParams.set("limit", PAGE_SIZE);
+      url.searchParams.set("sort", "-startAt");
       if (q) url.searchParams.set("q", q);
       if (status) url.searchParams.set("status", status);
-      if (from) url.searchParams.set("from", from);
-      if (to) url.searchParams.set("to", to);
-      url.searchParams.set("page", String(pageNum));
-      url.searchParams.set("limit", String(PAGE_SIZE));
-      url.searchParams.set("sort", "-startAt");
 
-      const res = await authFetch(url.toString());
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.message || "Failed to load campaigns");
-      }
+      const res = await apiFetch(url.toString());
       const j = await res.json();
-      setRows(j.data || []); // your controller returns { data, total, page, ... }
-      setTotal(j.total || 0);
-      setPage(j.page || 1);
+      if (!res.ok) throw new Error(j.message || "Failed to load");
+
+      const list = j.data ?? [];
+      const pg = j.pagination ?? {};
+      setRows(list);
+      setPage(pg.page ?? 1);
+      setPages(pg.pages ?? 1);
+      setTotal(pg.total ?? list.length);
     } catch (e) {
       setErr(e.message || "Failed to load");
     } finally {
@@ -111,8 +88,6 @@ export default function ManageCampaigns() {
     load(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="p-6 space-y-4">
@@ -139,7 +114,7 @@ export default function ManageCampaigns() {
 
       {/* Filters */}
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-2 flex items-center border rounded-lg px-2">
             <Search size={16} className="text-gray-400" />
             <input
@@ -161,36 +136,10 @@ export default function ManageCampaigns() {
               ))}
             </select>
           </div>
-          <div>
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
-            />
-          </div>
         </div>
         <div className="mt-3 flex gap-2">
-          <button
-            onClick={() => load(1)}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:bg-gray-50"
-          >
-            Apply
-          </button>
-          <button
-            onClick={() => { setQ(""); setStatus(""); setFrom(""); setTo(""); load(1); }}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:bg-gray-50"
-          >
-            Clear
-          </button>
+          <button onClick={() => load(1)} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:bg-gray-50">Apply</button>
+          <button onClick={() => { setQ(""); setStatus(""); load(1); }} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:bg-gray-50">Clear</button>
         </div>
       </div>
 
@@ -223,12 +172,7 @@ export default function ManageCampaigns() {
                   <tr key={r._id} className="border-t align-top">
                     <td className="py-2">
                       {r.posterImg ? (
-                        <img
-                          alt="poster"
-                          src={`${API_BASE}/${r.posterImg}`}
-                          className="h-12 w-12 rounded object-cover border"
-                          onError={(e) => (e.currentTarget.style.display = "none")}
-                        />
+                        <img alt="poster" src={r.posterImg} className="h-12 w-12 rounded object-cover border" />
                       ) : (
                         <div className="h-12 w-12 rounded border flex items-center justify-center text-gray-400">
                           <ImageIcon size={16} />
@@ -241,12 +185,7 @@ export default function ManageCampaigns() {
                     <td className="py-2">
                       {r.venue || "-"}{" "}
                       {r.locationUrl && (
-                        <a
-                          href={r.locationUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline ml-1"
-                        >
+                        <a href={r.locationUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline ml-1">
                           <LinkIcon size={12} /> Map
                         </a>
                       )}
@@ -256,14 +195,11 @@ export default function ManageCampaigns() {
                     <td className="py-2"><StatusChip value={r.status} /></td>
                     <td className="py-2">
                       <div className="flex gap-2">
-                        <button
-                          className="text-xs rounded-md border px-2 py-1 hover:bg-gray-50 inline-flex items-center gap-1"
-                          onClick={() => setEditing(r)}
-                        >
+                        <button className="text-xs rounded-md border px-2 py-1 hover:bg-gray-50 inline-flex items-center gap-1" onClick={() => setEditing(r)}>
                           <Pencil size={14} /> Edit
                         </button>
-                        <PublishButton row={r} authFetch={authFetch} onDone={() => load(page)} />
-                        <DeleteButton row={r} authFetch={authFetch} onDone={() => load(page)} />
+                        <PublishButton row={r} onDone={() => load(page)} />
+                        <DeleteButton row={r} onDone={() => load(page)} />
                       </div>
                     </td>
                   </tr>
@@ -279,18 +215,10 @@ export default function ManageCampaigns() {
             Page {page} of {pages} • {total} total
           </span>
           <div className="flex items-center gap-2">
-            <button
-              disabled={page <= 1}
-              onClick={() => load(page - 1)}
-              className="inline-flex items-center gap-1 rounded-md border px-2 py-1 disabled:opacity-50"
-            >
+            <button disabled={page <= 1} onClick={() => load(page - 1)} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 disabled:opacity-50">
               <ChevronLeft size={16} /> Prev
             </button>
-            <button
-              disabled={page >= pages}
-              onClick={() => load(page + 1)}
-              className="inline-flex items-center gap-1 rounded-md border px-2 py-1 disabled:opacity-50"
-            >
+            <button disabled={page >= pages} onClick={() => load(page + 1)} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 disabled:opacity-50">
               Next <ChevronRight size={16} />
             </button>
           </div>
@@ -302,7 +230,7 @@ export default function ManageCampaigns() {
         <UpsertModal
           title="New Campaign"
           initial={{
-            hospitalName: role === "hospital" ? hospitalName : "",
+            hospitalName: "",
             title: "",
             organization: "",
             status: "planned",
@@ -314,8 +242,6 @@ export default function ManageCampaigns() {
           }}
           onClose={() => setOpenNew(false)}
           onSaved={() => { setOpenNew(false); load(1); }}
-          role={role}
-          authFetch={authFetch}
         />
       )}
       {editing && (
@@ -324,8 +250,6 @@ export default function ManageCampaigns() {
           initial={editing}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); load(page); }}
-          role={role}
-          authFetch={authFetch}
         />
       )}
     </div>
@@ -343,29 +267,20 @@ function SkeletonTable() {
   );
 }
 
-/* ===========================
-   Publish / Delete actions
-   =========================== */
-function PublishButton({ row, authFetch, onDone }) {
-  const publish = async () => {
+function PublishButton({ row, onDone }) {
+  const click = async () => {
     try {
-      // valid flow: planned → ongoing → completed
       const next =
         row.status === "planned" ? "ongoing" :
         row.status === "ongoing" ? "completed" :
         "completed";
 
-      // JSON-only PATCH (no Multer) to avoid content-type mismatch
-      const res = await authFetch(`${API_BASE}/api/camps/${row._id}`, {
+      const res = await apiFetch(`${API_BASE}/api/camps/${row._id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: next }),
       });
-
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.message || "Failed to update status");
-      }
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.message || "Failed to update status");
       toast.success(`Status → ${next}`);
       onDone?.();
     } catch (e) {
@@ -374,21 +289,19 @@ function PublishButton({ row, authFetch, onDone }) {
   };
 
   return (
-    <button onClick={publish} className="text-xs rounded-md border px-2 py-1 hover:bg-gray-50 inline-flex items-center gap-1">
+    <button onClick={click} className="text-xs rounded-md border px-2 py-1 hover:bg-gray-50 inline-flex items-center gap-1">
       <BadgeCheck size={14} /> {row.status === "planned" ? "Start" : "Complete"}
     </button>
   );
 }
 
-function DeleteButton({ row, authFetch, onDone }) {
+function DeleteButton({ row, onDone }) {
   const del = async () => {
     if (!confirm("Delete this campaign?")) return;
     try {
-      const res = await authFetch(`${API_BASE}/api/camps/${row._id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.message || "Failed to delete");
-      }
+      const res = await apiFetch(`${API_BASE}/api/camps/${row._id}`, { method: "DELETE" });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.message || "Delete failed");
       toast.success("Deleted");
       onDone?.();
     } catch (e) {
@@ -402,12 +315,8 @@ function DeleteButton({ row, authFetch, onDone }) {
   );
 }
 
-/* ===========================
-   Upsert Modal (Create/Update)
-   =========================== */
-function UpsertModal({ title, initial, onClose, onSaved, role, authFetch }) {
+function UpsertModal({ title, initial, onClose, onSaved }) {
   const isEdit = Boolean(initial && initial._id);
-
   const [form, setForm] = useState({
     hospitalName: initial.hospitalName || "",
     title: initial.title || "",
@@ -418,11 +327,8 @@ function UpsertModal({ title, initial, onClose, onSaved, role, authFetch }) {
     venue: initial.venue || "",
     locationUrl: initial.locationUrl || "",
   });
-
   const [posterFile, setPosterFile] = useState(null);
-  const [posterPreview, setPosterPreview] = useState(
-    initial.posterImg ? `${API_BASE}/${initial.posterImg}` : ""
-  );
+  const [posterPreview, setPosterPreview] = useState(initial.posterImg || "");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -437,9 +343,9 @@ function UpsertModal({ title, initial, onClose, onSaved, role, authFetch }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.title) return toast.error("Title is required");
+    if (!form.hospitalName || !form.title) return toast.error("Hospital & title are required");
     if (!form.startAt || !form.endAt) return toast.error("Start and end times are required");
-    if (role === "admin" && !form.hospitalName) return toast.error("Hospital name is required");
+    if (new Date(form.endAt) < new Date(form.startAt)) return toast.error("End cannot be before start");
 
     setBusy(true);
     try {
@@ -452,25 +358,23 @@ function UpsertModal({ title, initial, onClose, onSaved, role, authFetch }) {
       fd.append("endAt", new Date(form.endAt).toISOString());
       if (form.venue) fd.append("venue", form.venue);
       if (form.locationUrl) fd.append("locationUrl", form.locationUrl);
-      if (posterFile) fd.append("poster", posterFile);
+      if (posterFile) fd.append("poster", posterFile); // must be 'poster'
 
       let res;
       if (isEdit) {
-        res = await authFetch(`${API_BASE}/api/camps/${initial._id}`, {
-          method: "PUT", // multer-powered endpoint; DO NOT set Content-Type
-          body: fd,
+        res = await apiFetch(`${API_BASE}/api/camps/${initial._id}`, {
+          method: "PATCH",
+          body: fd, // multipart
         });
       } else {
-        res = await authFetch(`${API_BASE}/api/camps`, {
+        res = await apiFetch(`${API_BASE}/api/camps`, {
           method: "POST",
-          body: fd, // DO NOT set Content-Type; browser sets boundary
+          body: fd, // multipart
         });
       }
 
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.message || "Save failed");
-      }
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.message || "Save failed");
 
       toast.success(isEdit ? "Updated" : "Created");
       onSaved?.();
@@ -490,7 +394,6 @@ function UpsertModal({ title, initial, onClose, onSaved, role, authFetch }) {
         </div>
 
         <form onSubmit={submit} className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Hospital Name */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Hospital Name</label>
             <input
@@ -498,14 +401,9 @@ function UpsertModal({ title, initial, onClose, onSaved, role, authFetch }) {
               onChange={updateField("hospitalName")}
               className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
               required
-              disabled={role === "hospital"}
             />
-            {role === "hospital" && (
-              <p className="mt-1 text-xs text-gray-500">This is set from your hospital profile.</p>
-            )}
           </div>
 
-          {/* Title */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
             <input
@@ -516,7 +414,6 @@ function UpsertModal({ title, initial, onClose, onSaved, role, authFetch }) {
             />
           </div>
 
-          {/* Organization + Status */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Organization</label>
             <input
@@ -536,7 +433,6 @@ function UpsertModal({ title, initial, onClose, onSaved, role, authFetch }) {
             </select>
           </div>
 
-          {/* Dates */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"><CalendarDays size={14} /> Start</label>
             <input
@@ -558,7 +454,6 @@ function UpsertModal({ title, initial, onClose, onSaved, role, authFetch }) {
             />
           </div>
 
-          {/* Venue + Map URL */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"><MapPin size={14} /> Venue</label>
             <input
@@ -578,7 +473,6 @@ function UpsertModal({ title, initial, onClose, onSaved, role, authFetch }) {
             />
           </div>
 
-          {/* Poster upload */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Poster Image</label>
             <div className="flex items-center gap-3">
@@ -599,20 +493,9 @@ function UpsertModal({ title, initial, onClose, onSaved, role, authFetch }) {
             <p className="mt-1 text-xs text-gray-500">Max 5MB. JPG/PNG/WEBP.</p>
           </div>
 
-          {/* Actions */}
           <div className="md:col-span-2 flex items-center justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={busy}
-              className="inline-flex items-center gap-2 rounded-xl bg-gray-900 text-white px-3 py-2 text-sm hover:bg-black disabled:opacity-60"
-            >
+            <button type="button" onClick={onClose} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm hover:bg-gray-50">Cancel</button>
+            <button type="submit" disabled={busy} onClick={submit} className="inline-flex items-center gap-2 rounded-xl bg-gray-900 text-white px-3 py-2 text-sm hover:bg-black disabled:opacity-60">
               <Save size={16} /> {busy ? "Saving..." : "Save"}
             </button>
           </div>
@@ -622,7 +505,6 @@ function UpsertModal({ title, initial, onClose, onSaved, role, authFetch }) {
   );
 }
 
-// Helpers
 function toLocal(value) {
   const d = new Date(value);
   const pad = (n) => String(n).padStart(2, "0");

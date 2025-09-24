@@ -1,5 +1,5 @@
 // src/pages/Campaings.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Megaphone,
   Search,
@@ -16,23 +16,11 @@ import {
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 const PAGE_SIZE = 12;
-// Align with your mongoose enum
 const CAMP_STATUSES = ["planned", "ongoing", "completed", "cancelled"];
 
-const StatusChip = ({ value }) => {
-  const color = {
-    planned: "bg-slate-100 text-slate-700 border-slate-200",
-    ongoing: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    completed: "bg-gray-100 text-gray-700 border-gray-200",
-    cancelled: "bg-rose-100 text-rose-700 border-rose-200",
-  }[value] || "bg-slate-100 text-slate-700 border-slate-200";
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${color}`}>
-      {value}
-    </span>
-  );
-};
-
+/* -------------------------
+   Utils
+------------------------- */
 const fmtDate = (d) => {
   if (!d) return "—";
   const dt = new Date(d);
@@ -40,31 +28,66 @@ const fmtDate = (d) => {
 };
 const toISOStart = (d) => (d ? `${d}T00:00:00.000Z` : "");
 const toISOEnd = (d) => (d ? `${d}T23:59:59.999Z` : "");
-
-// Build a Google Maps URL: prefer locationUrl; fallback to search(query)
 const buildMapUrl = (locationUrl, venue, hospitalName) => {
   if (locationUrl && /^https?:\/\//i.test(locationUrl)) return locationUrl;
   const q = [venue, hospitalName].filter(Boolean).join(", ");
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+};
+const posterUrl = (p) => (!p ? null : /^https?:\/\//i.test(p) ? p : `${API_BASE}/${p}`);
+
+/* -------------------------
+   Reveal animation hook
+------------------------- */
+function useRevealOnce() {
+  const [visible, setVisible] = useState(false);
+  const refCb = useCallback((node) => {
+    if (!node) return;
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) {
+        setVisible(true);
+        io.disconnect();
+      }
+    }, { threshold: 0.12 });
+    io.observe(node);
+  }, []);
+  return [refCb, visible];
+}
+
+/* -------------------------
+   Status chip
+------------------------- */
+const StatusChip = ({ value }) => {
+  const color =
+    {
+      planned: "bg-slate-100 text-slate-700 border-slate-200",
+      ongoing: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      completed: "bg-gray-100 text-gray-700 border-gray-200",
+      cancelled: "bg-rose-100 text-rose-700 border-rose-200",
+    }[value] || "bg-slate-100 text-slate-700 border-slate-200";
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${color}`}>
+      {value}
+    </span>
+  );
 };
 
 export default function Campaings() {
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
   // filters
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState(""); // all
+  const [status, setStatus] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
-  // detail modal
-  const [open, setOpen] = useState(null); // row
-
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  // modal & lightbox
+  const [open, setOpen] = useState(null); // selected campaign
+  const [fullImg, setFullImg] = useState(null);
 
   const load = async (p = page) => {
     setLoading(true);
@@ -84,15 +107,18 @@ export default function Campaings() {
       if (token) headers.Authorization = `Bearer ${token}`;
 
       const res = await fetch(url.toString(), { headers });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.message || "Failed to load campaigns");
-      }
       const j = await res.json();
-      // support both { data } and { camps } shapes
-      setRows(j.data || j.camps || []);
-      setTotal(j.total || 0);
-      setPage(j.page || 1);
+      if (!res.ok) throw new Error(j.message || "Failed to load campaigns");
+
+      const list = j.data ?? j.camps ?? [];
+      const pg = j.pagination ?? {};
+      const t = pg.total ?? list.length;
+      const pgCount = pg.pages ?? Math.max(1, Math.ceil(t / PAGE_SIZE));
+
+      setRows(list);
+      setTotal(t);
+      setPage(pg.page ?? p);
+      setPages(pgCount);
     } catch (e) {
       setErr(e.message || "Failed to load");
     } finally {
@@ -115,8 +141,13 @@ export default function Campaings() {
 
   const Quick = ({ label, v }) => (
     <button
-      onClick={() => { setStatus(v); load(1); }}
-      className={`text-xs rounded-full border px-2 py-1 ${status === v ? "bg-gray-900 text-white" : "bg-white hover:bg-gray-50"}`}
+      onClick={() => {
+        setStatus(v);
+        load(1);
+      }}
+      className={`text-xs rounded-full border px-2 py-1 transition ${
+        status === v ? "bg-gray-900 text-white" : "bg-white hover:bg-gray-50"
+      }`}
     >
       {label}
     </button>
@@ -215,76 +246,9 @@ export default function Campaings() {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {rows.map((c) => {
-                const posterSrc = c.posterImg ? `${API_BASE}/${c.posterImg}` : null;
-                const mapUrl = buildMapUrl(c.locationUrl, c.venue, c.hospitalName);
-                return (
-                  <div
-                    key={c._id}
-                    className="rounded-2xl border border-gray-200 p-4 hover:bg-gray-50 transition flex flex-col"
-                  >
-                    {/* Top: Title + Status */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="font-medium truncate">{c.title}</div>
-                        <div className="mt-0.5 text-xs text-gray-500 truncate">
-                          {c.hospitalName || "—"}{c.organization ? ` • ${c.organization}` : ""}
-                        </div>
-                      </div>
-                      <StatusChip value={c.status} />
-                    </div>
-
-                    {/* Poster */}
-                    <div className="mt-3">
-                      {posterSrc ? (
-                        <img
-                          src={posterSrc}
-                          alt="poster"
-                          className="w-full h-40 object-cover rounded-lg border"
-                          onError={(e) => (e.currentTarget.style.display = "none")}
-                        />
-                      ) : (
-                        <div className="w-full h-40 rounded-lg border flex items-center justify-center text-gray-400">
-                          <ImageIcon size={20} />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="mt-3 space-y-1 text-sm text-gray-700">
-                      <div className="flex items-center gap-2">
-                        <CalendarDays size={16} className="text-gray-500" />
-                        <span className="truncate">
-                          {fmtDate(c.startAt)} → {fmtDate(c.endAt)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin size={16} className="text-gray-500" />
-                        <span className="truncate">{c.venue || "—"}</span>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="mt-3 flex items-center justify-between">
-                      <button
-                        onClick={() => setOpen(c)}
-                        className="inline-flex items-center gap-2 text-sm rounded-lg border px-3 py-1.5 hover:bg-gray-50"
-                      >
-                        <Info size={14} /> Details
-                      </button>
-                      <a
-                        href={mapUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-2 text-sm rounded-lg border px-3 py-1.5 hover:bg-gray-50 text-blue-700"
-                        title="Open in Google Maps"
-                      >
-                        <LinkIcon size={14} /> Open in Maps
-                      </a>
-                    </div>
-                  </div>
-                );
-              })}
+              {rows.map((c, i) => (
+                <CampaignCard key={c._id} c={c} index={i} onOpen={() => setOpen(c)} />
+              ))}
             </div>
 
             {/* Pagination */}
@@ -314,55 +278,143 @@ export default function Campaings() {
       </div>
 
       {/* Detail modal */}
-      {open && <DetailModal camp={open} onClose={() => setOpen(null)} />}
-    </div>
-  );
-}
+      {open && (
+        <DetailModal
+          camp={open}
+          onClose={() => setOpen(null)}
+          onZoom={(u) => setFullImg(u)}
+        />
+      )}
 
-function SkeletonGrid() {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-      {[...Array(6)].map((_, i) => (
-        <div key={i} className="rounded-2xl border border-gray-200 p-4">
-          <div className="h-5 w-2/3 bg-gray-100 rounded animate-pulse" />
-          <div className="mt-2 h-4 w-1/3 bg-gray-100 rounded animate-pulse" />
-          <div className="mt-4 h-4 w-5/6 bg-gray-100 rounded animate-pulse" />
-          <div className="mt-2 h-4 w-4/6 bg-gray-100 rounded animate-pulse" />
+      {/* Full-screen lightbox */}
+      {fullImg && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/80 grid place-items-center p-4"
+          onClick={() => setFullImg(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <img src={fullImg} alt="full" className="max-h-[95vh] max-w-[95vw] object-contain" />
         </div>
-      ))}
+      )}
     </div>
   );
 }
 
-function DetailModal({ camp, onClose }) {
+/* -------------------------
+   Card (smaller: fixed h-56 box, object-contain)
+------------------------- */
+function CampaignCard({ c, index, onOpen }) {
+  const [ref, visible] = useRevealOnce();
+  const src = posterUrl(c.posterImg);
+  const mapUrl = buildMapUrl(c.locationUrl, c.venue, c.hospitalName);
+
+  return (
+    <div
+      ref={ref}
+      className={`group relative overflow-hidden rounded-2xl border border-gray-200 bg-white transition-all duration-500 ${
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      } hover:-translate-y-1 hover:shadow-xl`}
+      style={{ transitionDelay: `${Math.min(index, 6) * 30}ms` }}
+    >
+      {/* Poster — fixed, smaller box with letterboxing */}
+      <div className="p-2">
+        <div className="w-full h-56 rounded-lg border bg-white grid place-items-center overflow-hidden">
+          {src ? (
+            <img
+              src={src}
+              alt="poster"
+              className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
+              onError={(e) => (e.currentTarget.style.display = "none")}
+            />
+          ) : (
+            <div className="w-full h-full grid place-items-center text-gray-400">
+              <ImageIcon size={18} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="px-4 pb-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="font-semibold truncate">{c.title}</div>
+            <div className="mt-0.5 text-xs text-gray-500 truncate">
+              {c.hospitalName || "—"}{c.organization ? ` • ${c.organization}` : ""}
+            </div>
+          </div>
+          <StatusChip value={c.status} />
+        </div>
+
+        {/* Info */}
+        <div className="mt-3 space-y-1 text-sm text-gray-700">
+          <div className="flex items-center gap-2">
+            <CalendarDays size={16} className="text-gray-500" />
+            <span className="truncate">
+              {fmtDate(c.startAt)} → {fmtDate(c.endAt)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <MapPin size={16} className="text-gray-500" />
+            <span className="truncate">{c.venue || "—"}</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="mt-3 flex items-center justify-between">
+          <button
+            onClick={onOpen}
+            className="inline-flex items-center gap-2 text-sm rounded-lg border px-3 py-1.5 hover:bg-gray-50"
+          >
+            <Info size={14} /> Details
+          </button>
+          <a
+            href={mapUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 text-sm rounded-lg border px-3 py-1.5 hover:bg-gray-50 text-blue-700"
+            title="Open in Google Maps"
+          >
+            <LinkIcon size={14} /> Open in Maps
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------
+   Detail Modal (slightly smaller max height)
+------------------------- */
+function DetailModal({ camp, onClose, onZoom }) {
   const mapUrl = buildMapUrl(camp.locationUrl, camp.venue, camp.hospitalName);
-  const posterSrc = camp.posterImg ? `${API_BASE}/${camp.posterImg}` : null;
+  const src = posterUrl(camp.posterImg);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true">
-      <div className="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white shadow-xl">
+      <div className="w-full max-w-3xl rounded-2xl border border-gray-200 bg-white shadow-xl">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <Megaphone size={18} />
             <h3 className="font-semibold">{camp.title}</h3>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg px-3 py-1.5 text-sm border hover:bg-gray-50"
-          >
+          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-sm border hover:bg-gray-50">
             Close
           </button>
         </div>
 
         <div className="p-4 space-y-4">
-          {/* Poster */}
-          {posterSrc && (
-            <img
-              src={posterSrc}
-              alt="poster"
-              className="w-full h-52 object-cover rounded-lg border"
-              onError={(e) => (e.currentTarget.style.display = "none")}
-            />
+          {src && (
+            <div className="w-full max-h-[70vh] rounded-lg border bg-white grid place-items-center p-2">
+              <img
+                src={src}
+                alt="poster"
+                className="max-h-[68vh] max-w-full object-contain cursor-zoom-in"
+                onClick={() => onZoom?.(src)}
+                onError={(e) => (e.currentTarget.style.display = "none")}
+              />
+            </div>
           )}
 
           <div className="flex flex-wrap items-center gap-2">
@@ -407,6 +459,27 @@ function Row({ icon: Icon, label, value }) {
           <div className="text-sm font-medium">{String(value ?? "—")}</div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* -------------------------
+   Skeleton
+------------------------- */
+function SkeletonGrid() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="rounded-2xl border border-gray-200 overflow-hidden">
+          <div className="h-56 w-full bg-gray-100 animate-pulse" />
+          <div className="p-4">
+            <div className="h-5 w-2/3 bg-gray-100 rounded animate-pulse" />
+            <div className="mt-2 h-4 w-1/3 bg-gray-100 rounded animate-pulse" />
+            <div className="mt-4 h-4 w-5/6 bg-gray-100 rounded animate-pulse" />
+            <div className="mt-2 h-4 w-4/6 bg-gray-100 rounded animate-pulse" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
