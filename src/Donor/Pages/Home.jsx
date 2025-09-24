@@ -18,28 +18,28 @@ const HOME_CAMPS_LIMIT = 3;
 
 const slides = [
   {
-    title: "ජීවිත බේරාගැනීමට ඔබේ රුධිරය",
-    subtitle: "ඔබගේ කුඩා ඉල්ලීමක් — යමෙක්ගේ පූර්ණ ජීවිතයක්.",
-    cta: "රුධිර දානයට එක්වන්න",
+    title: "Your Blood Can Save Lives",
+    subtitle: "A small act for you — a lifetime for someone else.",
+    cta: "Donate Blood",
     href: "/donate",
     image:
-      "https://images.unsplash.com/photo-1697192156499-d85cfe1452c0?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "https://images.unsplash.com/photo-1697192156499-d85cfe1452c0?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0",
   },
   {
-    title: "අදම රුධිර දානයට",
-    subtitle: "සෞඛ්‍ය අංශයන් සමඟ රක්ත සුරක්ෂිතභාවය වැඩි දියුණු කරමු.",
-    cta: "ඉදිරි කඳවුරැ බලන්න",
+    title: "Donate Today",
+    subtitle: "Join hands with healthcare to strengthen blood safety.",
+    cta: "See Upcoming Camps",
     href: "/campaigns",
     image:
-      "https://images.unsplash.com/photo-1542884841-9f546e727bca?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "https://images.unsplash.com/photo-1542884841-9f546e727bca?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0",
   },
   {
-    title: "රෝගියෙකුට ඔබයි අපේක්ෂාව",
-    subtitle: "සහයෝගයෙන් ජීවිත ගොඩනඟමු.",
-    cta: "ආයතනික දායකත්වය",
+    title: "Be the Hope for a Patient",
+    subtitle: "Together, we rebuild lives.",
+    cta: "Partner With Us",
     href: "/hospitals",
     image:
-      "https://images.unsplash.com/photo-1676313125237-cacf3e880dc2?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "https://images.unsplash.com/photo-1676313125237-cacf3e880dc2?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0",
   },
 ];
 
@@ -51,30 +51,29 @@ export default function Home() {
   const swiperRef = useRef(null);
   const [swiperReady, setSwiperReady] = useState(false);
 
-  // --- New: upcoming campaigns state ---
+  // Upcoming campaigns (top 3)
   const [upcoming, setUpcoming] = useState([]);
   const [totalCamps, setTotalCamps] = useState(0);
   const [campLoading, setCampLoading] = useState(true);
   const [campErr, setCampErr] = useState("");
 
-  // Initialize GSAP animations
+  /* ---------------------------
+     GSAP page-level animations
+  --------------------------- */
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Fade-up reveals
+      // fade-up reveals
       gsap.utils.toArray(".reveal").forEach((el) => {
         gsap.from(el, {
           y: 24,
           opacity: 0,
           duration: 0.6,
           ease: "power2.out",
-          scrollTrigger: {
-            trigger: el,
-            start: "top 85%",
-          },
+          scrollTrigger: { trigger: el, start: "top 85%" },
         });
       });
 
-      // Count-up numbers when stats section enters
+      // counters
       const counters = gsap.utils.toArray(".counter");
       counters.forEach((el) => {
         const end = Number(el.getAttribute("data-end") || "0");
@@ -89,7 +88,7 @@ export default function Home() {
               duration: 1.4,
               ease: "power2.out",
               onUpdate: () => {
-                el.textContent = Math.floor(obj.val).toLocaleString("si-LK");
+                el.textContent = Math.floor(obj.val).toLocaleString("en-US");
               },
             });
           },
@@ -100,7 +99,9 @@ export default function Home() {
     return () => ctx.revert();
   }, []);
 
-  // Text animation for slider
+  /* ---------------------------
+     Slide text animation
+  --------------------------- */
   useEffect(() => {
     if (!swiperReady) return;
     const swiper = swiperRef.current;
@@ -139,15 +140,17 @@ export default function Home() {
     return () => swiper.off("slideChange", handleSlideChange);
   }, [swiperReady]);
 
-  // --- New: fetch 3 upcoming/planned (fallback to ongoing) ---
+  /* ---------------------------
+     Fetch top 3 upcoming/ongoing
+  --------------------------- */
   useEffect(() => {
     const load = async () => {
       setCampLoading(true);
       setCampErr("");
       try {
-        const withAuth = {};
+        const headers = {};
         const token = localStorage.getItem("auth_token");
-        if (token) withAuth.Authorization = `Bearer ${token}`;
+        if (token) headers.Authorization = `Bearer ${token}`;
 
         // Try planned first (soonest first)
         const urlPlanned = new URL(`${API_BASE}/api/camps`);
@@ -156,14 +159,14 @@ export default function Home() {
         urlPlanned.searchParams.set("limit", String(HOME_CAMPS_LIMIT));
         urlPlanned.searchParams.set("sort", "startAt");
 
-        let res = await fetch(urlPlanned.toString(), { headers: withAuth });
+        let res = await fetch(urlPlanned.toString(), { headers });
         let j = await res.json();
         if (!res.ok) throw new Error(j.message || "Failed to load campaigns");
 
         let list = j.data ?? j.camps ?? [];
         let total = j.pagination?.total ?? list.length;
 
-        // Fallback: if no planned, show ongoing
+        // Fallback: if none planned, show ongoing
         if (list.length === 0) {
           const urlOngoing = new URL(`${API_BASE}/api/camps`);
           urlOngoing.searchParams.set("status", "ongoing");
@@ -171,7 +174,7 @@ export default function Home() {
           urlOngoing.searchParams.set("limit", String(HOME_CAMPS_LIMIT));
           urlOngoing.searchParams.set("sort", "startAt");
 
-          res = await fetch(urlOngoing.toString(), { headers: withAuth });
+          res = await fetch(urlOngoing.toString(), { headers });
           j = await res.json();
           if (!res.ok) throw new Error(j.message || "Failed to load campaigns");
           list = j.data ?? j.camps ?? [];
@@ -205,9 +208,8 @@ export default function Home() {
             el: ".swiper-pagination",
             bulletClass: "swiper-pagination-bullet",
             bulletActiveClass: "swiper-pagination-bullet-active",
-            renderBullet: (index, className) => {
-              return `<span class="${className} bg-white opacity-50 hover:opacity-75 transition-opacity duration-300"></span>`;
-            },
+            renderBullet: (index, className) =>
+              `<span class="${className} bg-white opacity-50 hover:opacity-75 transition-opacity duration-300"></span>`,
           }}
           navigation={{
             nextEl: ".swiper-button-next",
@@ -232,6 +234,7 @@ export default function Home() {
                 </div>
                 {/* Gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent z-1" />
+
                 {/* Content */}
                 <div className="absolute inset-0 flex items-center z-2">
                   <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -259,17 +262,17 @@ export default function Home() {
         </Swiper>
 
         {/* Custom pagination */}
-        <div className="swiper-pagination absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10 flex space-x-2"></div>
+        <div className="swiper-pagination absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex space-x-2"></div>
 
         {/* Custom navigation */}
-        <div className="swiper-button-prev absolute left-4 top-1/2 transform -translate-y-1/2 z-10 text-white opacity-70 hover:opacity-100 transition-opacity duration-300 hidden md:block">
+        <div className="swiper-button-prev absolute left-4 top-1/2 -translate-y-1/2 z-10 text-white opacity-70 hover:opacity-100 transition-opacity duration-300 hidden md:block">
           <div className="w-10 h-10 rounded-full bg-black/30 flex items-center justify-center">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </div>
         </div>
-        <div className="swiper-button-next absolute right-4 top-1/2 transform -translate-y-1/2 z-10 text-white opacity-70 hover:opacity-100 transition-opacity duration-300 hidden md:block">
+        <div className="swiper-button-next absolute right-4 top-1/2 -translate-y-1/2 z-10 text-white opacity-70 hover:opacity-100 transition-opacity duration-300 hidden md:block">
           <div className="w-10 h-10 rounded-full bg-black/30 flex items-center justify-center">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -284,25 +287,24 @@ export default function Home() {
           <div className="grid grid-cols-1 gap-12 md:grid-cols-2 items-center">
             <div className="reveal">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                අපේ අරමුණ — රුධිරය අවශ්‍ය සියළු දෙනාට
+                Our Mission — Safe Blood for All
               </h2>
               <p className="text-lg text-gray-600 leading-8 mb-8">
-                රුධිරය සුරක්ෂිතව, සවිස්තරාත්මකව, විශ්වාසදායකව කළමනාකරණය කරමින්
-                රෝගීන්ගේ ජීවිත බේරා ගැනීම අපගේ ප්‍රමුඛ අරමුණයි. ඔබගේ දායකත්වය
-                ජීවිත ගණනාවක් වෙනස් කරයි.
+                We work to keep blood safe, available, and trusted — saving lives every day.
+                Your contribution makes a real difference.
               </p>
               <div className="flex gap-4">
                 <Link
                   to="/campaigns"
                   className="rounded-xl border border-gray-200 bg-white px-5 py-3 text-base font-medium hover:bg-gray-50 transition-colors shadow-sm hover:shadow-md"
                 >
-                  දානයේ කඳවුරු
+                  Donation Camps
                 </Link>
                 <Link
                   to="/learn"
                   className="rounded-xl bg-gray-900 text-white px-5 py-3 text-base font-medium hover:bg-black transition-colors shadow-sm hover:shadow-md"
                 >
-                  දැනුම වැඩි කරගන්න
+                  Learn More
                 </Link>
               </div>
             </div>
@@ -324,10 +326,10 @@ export default function Home() {
       <section className="py-16 md:py-24 bg-gray-50">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 md:gap-8">
-            <Stat title="මෙම මාසයේ ඒකක" end={2845} suffix="" />
-            <Stat title="අද අපොයින්ට්මෙන්ට්" end={312} suffix="" />
-            <Stat title="ලියාපදිංචි දායකයින්" end={5104} suffix="+" />
-            <Stat title="අනුරූප රෝගීන්" end={42} suffix="" />
+            <Stat title="Units This Month" end={2845} />
+            <Stat title="Appointments Today" end={312} />
+            <Stat title="Registered Donors" end={5104} suffix="+" />
+            <Stat title="Matching Patients" end={42} />
           </div>
         </div>
       </section>
@@ -338,17 +340,17 @@ export default function Home() {
           <div className="reveal mb-10 flex items-end justify-between">
             <div>
               <h3 className="text-2xl md:text-3xl font-bold text-gray-900">
-                එනම් කඳවුරු
+                Upcoming Campaigns
               </h3>
               <p className="text-gray-600 mt-2">
-                ඔබ සිටින ප්‍රදේශයේම සමීප කඳවුරකට එකතු වන්න.
+                Join a donation camp near you.
               </p>
             </div>
             <Link
               to="/campaigns"
               className="text-base text-gray-900 font-medium hover:underline underline-offset-4"
             >
-              සියල්ල බලන්න {totalCamps > HOME_CAMPS_LIMIT ? `(${totalCamps})` : ""} →
+              See all {totalCamps > HOME_CAMPS_LIMIT ? `(${totalCamps})` : ""} →
             </Link>
           </div>
 
@@ -361,7 +363,8 @@ export default function Home() {
               </div>
             ) : upcoming.length === 0 ? (
               <div className="reveal text-gray-600 text-sm">
-                නවීන කඳවුරු මේ මොහොතේ නොමැත. <Link to="/campaigns" className="text-blue-600 underline">සියල්ල බලන්න</Link>
+                No campaigns at the moment.{" "}
+                <Link to="/campaigns" className="text-blue-600 underline">See all</Link>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -391,7 +394,8 @@ export default function Home() {
                           {c.title}
                         </h4>
                         <p className="text-gray-600 text-sm mb-3 truncate">
-                          {c.hospitalName || "—"}{c.organization ? ` • ${c.organization}` : ""}
+                          {c.hospitalName || "—"}
+                          {c.organization ? ` • ${c.organization}` : ""}
                         </p>
                         <p className="text-gray-700 text-sm mb-4">
                           {new Date(c.startAt).toLocaleString()} • {c.venue || "—"}
@@ -401,13 +405,13 @@ export default function Home() {
                             to="/campaigns"
                             className="inline-block text-sm rounded-lg border border-gray-200 px-4 py-2 hover:bg-gray-50 transition-colors"
                           >
-                            තොරතුරු
+                            Details
                           </Link>
                           <Link
                             to="/campaigns"
                             className="text-sm text-blue-700 hover:underline"
                           >
-                            වැඩිදුර →
+                            More →
                           </Link>
                         </div>
                       </div>
@@ -426,11 +430,10 @@ export default function Home() {
           <div className="reveal grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
             <div className="md:col-span-2">
               <h3 className="text-2xl md:text-3xl font-bold mb-4">
-                ඔබේ සාමූහික ආදරයෙන් ජීවිත බේරාගන්න.
+                Together, We Save Lives.
               </h3>
               <p className="text-white/80 text-lg">
-                ලියාපදිංචි වී නිතර දායකත්වය ලබා දීමෙන් රටේ රුධිර තොගය
-                ශක්තිමත් කරමු.
+                Register and donate regularly to strengthen our national blood supply.
               </p>
             </div>
             <div className="md:text-right">
@@ -438,7 +441,7 @@ export default function Home() {
                 to="/register"
                 className="inline-block rounded-xl bg-white text-gray-900 px-6 py-3 text-base font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
               >
-                දායකයෙකු වන්න
+                Become a Donor
               </Link>
             </div>
           </div>
