@@ -1,10 +1,5 @@
-// src/pages/campaigns/ManageCampaigns.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  Megaphone, Plus, RotateCw, Search, CalendarDays, MapPin, X, Save,
-  Pencil, Trash2, ChevronLeft, ChevronRight, BadgeCheck,
-  Link as LinkIcon, Image as ImageIcon
-} from "lucide-react";
+import {Megaphone, Plus, RotateCw, Search, CalendarDays, MapPin, X, Save,Pencil, Trash2, ChevronLeft, ChevronRight, BadgeCheck,Link as LinkIcon, Image as ImageIcon} from "lucide-react";
 import toast from "react-hot-toast";
 
 const API_BASE = import.meta.env?.VITE_API_BASE || "http://localhost:5000";
