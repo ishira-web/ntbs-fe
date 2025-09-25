@@ -8,6 +8,7 @@ import {
   Megaphone,
   ChevronLeft,
   ChevronRight,
+  Book,
 } from "lucide-react";
 
 const commonItems = [
@@ -16,7 +17,8 @@ const commonItems = [
   { key: "appointments", label: "Manage Requests", icon: CalendarCheck2 },
   { key: "campaigns", label: "Manage Campaigns", icon: Megaphone },
   { key: "users", label: "Manage Users", icon: Users },
-  { key: "request", label:"Manage Appoinments",icon:CalendarCheck2}
+  { key: "request", label:"Manage Appoinments",icon:CalendarCheck2},
+  {key: "blog" ,label:"Manage Blogs",icon:Book}
 ];
 
 const adminOnly = [

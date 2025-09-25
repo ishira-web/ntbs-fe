@@ -11,6 +11,7 @@ import ManageHospitals from "./pages/ManageHospitals";
 import ManageAppointments from "./pages/ManageAppointments";
 import ManageCampaigns from "./pages/ManageCampaigns";
 import Requests from '../Management/pages/Appoinments'
+import Blogs from '../Management/pages/ManageBlogs'
 
 export default function AppManagement() {
   const { role, user } = useAuth(); // ← get real role/user from context
@@ -36,6 +37,7 @@ export default function AppManagement() {
     if (active === "appointments") return ManageAppointments;
     if (active === "campaigns") return ManageCampaigns;
     if(active === "request") return Requests;
+    if(active === "blog") return Blogs;
     return () => <div className="p-6">Not found</div>;
   }, [active, isAdmin]);
 
