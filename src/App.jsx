@@ -12,6 +12,10 @@ import CampaignLayout from "./Donor/Layouts/CampaignLayout";
 import LearnLayout from "./Donor/Layouts/LearnLayout";
 import HospitalLayout from "./Donor/Layouts/HospitalLayout";
 import Register from "./Login/Register";
+import LearnArticle from "./Donor/Pages/LearnArticle";
+import ChatAssistant from "./Donor/components/ChatAssistant";
+
+
 
 
 function App() {
@@ -30,8 +34,11 @@ function App() {
           <Route path="/learn" element={<LearnLayout/>}/>
           <Route path="/hospitals" element={<HospitalLayout/>}/>
           <Route path="/register" element={<Register />}/>
+          <Route path="/learn/:id" element={<LearnArticle />} />
+           <Route path="/assistant" element={<ChatAssistant />} />
         </Routes>
       </AuthProvider>
+      
     </>
   );
 }

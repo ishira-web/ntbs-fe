@@ -12,6 +12,7 @@ import {
   Building2,
   Image as ImageIcon,
   Link as LinkIcon,
+  Pin,
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
@@ -319,7 +320,7 @@ function CampaignCard({ c, index, onOpen }) {
     >
       {/* Poster — fixed, smaller box with letterboxing */}
       <div className="p-2">
-        <div className="w-full h-56 rounded-lg border bg-white grid place-items-center overflow-hidden">
+        <div className="w-full h-56 rounded-lg  bg-white grid place-items-center overflow-hidden">
           {src ? (
             <img
               src={src}
@@ -365,7 +366,7 @@ function CampaignCard({ c, index, onOpen }) {
         <div className="mt-3 flex items-center justify-between">
           <button
             onClick={onOpen}
-            className="inline-flex items-center gap-2 text-sm rounded-lg border px-3 py-1.5 hover:bg-gray-50"
+            className="inline-flex items-center gap-2 text-sm rounded-lg border border-gray-400 px-3 py-1.5 hover:bg-gray-50"
           >
             <Info size={14} /> Details
           </button>
@@ -373,10 +374,10 @@ function CampaignCard({ c, index, onOpen }) {
             href={mapUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 text-sm rounded-lg border px-3 py-1.5 hover:bg-gray-50 text-blue-700"
+            className="inline-flex items-center gap-2 text-sm rounded-lg border px-3 py-1.5 bg-blue-700 text-gray-50"
             title="Open in Google Maps"
           >
-            <LinkIcon size={14} /> Open in Maps
+            <Pin size={14} /> Open in Maps
           </a>
         </div>
       </div>

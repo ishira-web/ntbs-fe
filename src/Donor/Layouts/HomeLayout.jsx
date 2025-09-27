@@ -3,6 +3,8 @@ import Home from '../Pages/Home'
 import Navbar from '../components/navbar'
 import AboutBlood from '../Pages/AboutBlood'
 import Footer from '../Pages/footer'
+import ChatAssistant from '../components/ChatAssistant'
+
 
 function HomeLayout() {
   return (
@@ -10,6 +12,7 @@ function HomeLayout() {
       <Navbar/>
       <Home/>
       <AboutBlood/>
+      <ChatAssistant/>
       <Footer/>
     </div>
   )
