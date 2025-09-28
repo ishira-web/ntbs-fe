@@ -179,33 +179,45 @@ function Learn() {
         </div>
       </section>
 
-      {/* Videos (placeholder) */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Video Resources</h2>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Watch these informative videos to learn more about the blood donation process.
-            </p>
-          </div>
+    {/* Videos (with embedded YouTube) */}
+<section className="py-16 md:py-24">
+  <div className="container mx-auto px-4 md:px-6">
+    <div className="text-center mb-12 md:mb-16">
+      <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Video Resources</h2>
+      <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+        Watch these informative videos to learn more about the blood donation process.
+      </p>
+    </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {[1,2].map(n => (
-              <div key={n} className="bg-gray-900 rounded-xl overflow-hidden aspect-video relative">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-center justify-center">
-                  <button className="bg-red-600 text-white rounded-full p-4 hover:bg-red-700 transition-colors">
-                    <Play size={32} fill="white" />
-                  </button>
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                  <h3 className="text-xl font-semibold mb-2">{n === 1 ? "The Blood Donation Process" : "Why Your Donation Matters"}</h3>
-                  <p className="text-white/80">{n === 1 ? "A step-by-step guide to what happens during donation" : "The impact of your donation on patients' lives"}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+  {/* Video 1 */}
+  <div className="rounded-xl overflow-hidden aspect-video relative">
+    <iframe
+      className="w-full h-full"
+      src="https://www.youtube.com/embed/jmhiHKsEUXU"
+      title="The Blood Donation Process"
+      frameBorder="0"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowFullScreen
+    ></iframe>
+  </div>
+
+  {/* Video 2 */}
+  <div className="rounded-xl overflow-hidden aspect-video relative">
+    <iframe
+      className="w-full h-full"
+      src="https://www.youtube.com/embed/kOISEM6L4xk"
+      title="Why Your Donation Matters"
+      frameBorder="0"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowFullScreen
+    ></iframe>
+  </div>
+</div>
+
+  </div>
+</section>
+
 
       {/* FAQs */}
       <section id="faq" className="py-16 md:py-24 bg-gray-100">

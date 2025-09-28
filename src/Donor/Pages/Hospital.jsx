@@ -100,6 +100,16 @@ export default function Hospital() {
     return authUser?.hospitalId || authUser?._id || authUser?.id || null;
   }, [authUser, roleLower]);
 
+  // ✅ NEW: Pending donor detection
+  const isDonorPending = useMemo(() => {
+    if (roleLower !== "donor") return false;
+    const s =
+      (authUser?.status || authUser?.approvalStatus || authUser?.donorStatus || "")
+        .toString()
+        .toLowerCase();
+    return s === "pending" || s === "awaiting_approval" || s === "inactive";
+  }, [roleLower, authUser]);
+
   // table state
   const [rows, setRows] = useState([]);
   const [page, setPage] = useState(1);
@@ -307,6 +317,10 @@ export default function Hospital() {
                   hospital={hospital}
                   onView={() => setViewing(hospital)}
                   onBook={() => {
+                    if (isDonorPending) {
+                      toast.error("Your donor account is pending approval.");
+                      return;
+                    }
                     if (roleLower !== "donor" || !donorIdOfUser) {
                       toast.error("Please log in as a donor to book an appointment.");
                       return;
@@ -320,8 +334,9 @@ export default function Hospital() {
                     }
                     setRequestFor(hospital);
                   }}
-                  canBook={roleLower === "donor" && !!donorIdOfUser}
+                  canBook={roleLower === "donor" && !!donorIdOfUser && !isDonorPending}
                   canRequest={roleLower === "hospital" && !!hospitalIdOfUser}
+                  donorPending={isDonorPending}
                 />
               ))}
             </div>
@@ -413,7 +428,7 @@ export default function Hospital() {
   );
 }
 
-function HospitalCard({ hospital, onView, onRequest, onBook, canRequest, canBook }) {
+function HospitalCard({ hospital, onView, onRequest, onBook, canRequest, canBook, donorPending }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start gap-4 mb-4">
@@ -456,8 +471,13 @@ function HospitalCard({ hospital, onView, onRequest, onBook, canRequest, canBook
         {canBook ? (
           <button
             onClick={onBook}
-            className="flex items-center justify-center gap-1 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-            title="Book an appointment"
+            disabled={donorPending}
+            title={donorPending ? "Your donor account is pending approval" : "Book an appointment"}
+            className={`flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors
+              ${donorPending
+                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                : "bg-blue-600 text-white hover:bg-blue-700"
+              }`}
           >
             <CalendarDays size={16} />
             Book
